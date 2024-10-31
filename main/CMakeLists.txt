@@ -9,9 +9,10 @@ idf_component_register(SRCS
                 "audio_task.c"
                 "safeblet_task.cpp"
                 "main.cpp"
+                # "app_test.cpp"
                 INCLUDE_DIRS ".")
 
-# spiffs_create_partition_image(storage ../spiffs FLASH_IN_PROJECT)
+spiffs_create_partition_image(storage ../spiffs FLASH_IN_PROJECT)
                 
 
 

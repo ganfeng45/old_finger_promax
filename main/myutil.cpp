@@ -7,7 +7,6 @@
 #define TAG __func__
 MD5Builder md5;
 
-
 String md5str(String str, int len)
 {
   /* 6CD3556DEBDA54BCA6 */
@@ -24,17 +23,16 @@ void sys_deafuat()
   work_rec.begin("work_rec", false);
   fg_cfg_local.begin("finger_cfg", false);
   finger_temp.begin("finger_tmp", false);
-  rfid_cfg_local.begin("rfid_cfg",false);
-  rfid_temp.begin("rfid_tmp",false);
+  rfid_cfg_local.begin("rfid_cfg", false);
+  rfid_temp.begin("rfid_tmp", false);
   sys_SB_LIMIT_TIME = dev_cfg.getInt("safe_belt_tm", 2);
   sys_SB_LOCK_TIME = dev_cfg.getInt("SB_LOCK", 655360);
   sys_SB_TYPE = dev_cfg.getInt("SB_TYPE", 0);
-  sys_card_verify=dev_cfg.getInt("card_verify",0);
-  dev_cfg.getInt("fg_num",100);
+  sys_card_verify = dev_cfg.getInt("card_verify", 0);
+  dev_cfg.getInt("fg_num", 100);
 
   // work_rec.freeEntries();
   // work_rec.freeEntries();
-
 
   // work_rec.clear();
 }
@@ -65,20 +63,19 @@ void car_onoff(uint8_t onoff)
     char *handle_arg = "/spiffs/lock.mp3";
     esp_event_post_to(bk_mqtt_handler, "audio", 1, handle_arg, strlen(handle_arg) + 1, portMAX_DELAY);
     delay(2000);
-    digitalWrite(audio_ctrl,LOW);
+    digitalWrite(audio_ctrl, LOW);
   }
   if (onoff && (dev_cfg.getInt("LOCK_ACTION", 0)) != 1)
   {
     // blackboard.car_sta.deviceStatus=DEV_AUTH;
-    finger.LEDcontrol(FINGERPRINT_LED_BREATHING, 100, FINGERPRINT_LED_BLUE,0);
+    finger.LEDcontrol(FINGERPRINT_LED_BREATHING, 100, FINGERPRINT_LED_BLUE, 0);
     ESP_LOGE(TAG, "Activate the relay: %d", j_on);
     digitalWrite(CAR_CON, j_on);
     char *handle_arg = "/spiffs/unlock.mp3";
     esp_event_post_to(bk_mqtt_handler, "audio", 1, handle_arg, strlen(handle_arg) + 1, portMAX_DELAY);
     delay(2000);
-    digitalWrite(audio_ctrl,LOW);
+    digitalWrite(audio_ctrl, LOW);
     digitalWrite(CAR_CON, j_off);
-
   }
   else
   {
@@ -120,11 +117,13 @@ int dev_init()
 //   memcpy(nuidPICC,tmp,16);
 //   Serial.print(tmp);
 // }
-void printHex(byte *buffer, byte bufferSize) {
-  for (byte i = 0; i < bufferSize; i++) {
+void printHex(byte *buffer, byte bufferSize)
+{
+  for (byte i = 0; i < bufferSize; i++)
+  {
     Serial.print(buffer[i] < 0x10 ? " 0" : " ");
     Serial.print(buffer[i], HEX);
-     uuid +=String(buffer[i], HEX);
+    uuid += String(buffer[i], HEX);
     // Serial.println(uuid);
   }
 }
@@ -136,21 +135,21 @@ void printDec(byte *buffer, byte bufferSize)
     Serial.print(buffer[i], DEC);
   }
 }
-bool getFinger=false;
+bool getFinger = false;
 uint8_t getFingerprintEnroll()
 {
   int p = -1;
-  uint8_t count = 4;/* 录入次数 只要改这一个参数 */
-  int num=0;
+  uint8_t count = 4; /* 录入次数 只要改这一个参数 */
+  int num = 0;
   uint8_t id = finger.ReadIndexTable();
   finger.auto_enroll(id, count, 0);
   uint8_t data[32];
   char *handle_arg = "/spiffs/press.mp3";
   esp_event_post_to(bk_mqtt_handler, "audio", 1, handle_arg, strlen(handle_arg) + 1, portMAX_DELAY);
   delay(1200);
-  digitalWrite(audio_ctrl,LOW);
+  digitalWrite(audio_ctrl, LOW);
   unsigned long Enroll_time = millis();
-  getFinger=true;
+  getFinger = true;
   while (1)
   {
     delay(1 * 100);
@@ -158,40 +157,39 @@ uint8_t getFingerprintEnroll()
     if (!data[0])
     {
       // if( (millis() - Enroll_time > 60000))
-      if(num>10)
+      if (num > 10)
       {
-          // Serial.printf("millis is");
-          // Serial.println(millis());
-          // Serial.printf("Enroll_time is");
-          // Serial.println(Enroll_time);
-          //  Serial.println(num);
-          num=0;
-          return 0;
+        // Serial.printf("millis is");
+        // Serial.println(millis());
+        // Serial.printf("Enroll_time is");
+        // Serial.println(Enroll_time);
+        //  Serial.println(num);
+        num = 0;
+        return 0;
       }
       if (data[2] == 0xf2)
       {
         return id;
       }
 
-      if (data[1] != 0x01&&data[1]<count+1&&(!(digitalRead(FG_TOUCH))))
+      if (data[1] != 0x01 && data[1] < count + 1 && (!(digitalRead(FG_TOUCH))))
       {
         handle_arg = "/spiffs/press.mp3";
         esp_event_post_to(bk_mqtt_handler, "audio", 1, handle_arg, strlen(handle_arg) + 1, portMAX_DELAY);
         delay(1200);
-        digitalWrite(audio_ctrl,LOW);
-
+        digitalWrite(audio_ctrl, LOW);
       }
       else
       {
         num++;
         while (digitalRead(FG_TOUCH))
         {
-           handle_arg = "/spiffs/remove.mp3";
-           esp_event_post_to(bk_mqtt_handler, "audio", 1, handle_arg, strlen(handle_arg) + 1, portMAX_DELAY);
-           delay(1200);
-           digitalWrite(audio_ctrl,LOW);
-           }
-      } 
+          handle_arg = "/spiffs/remove.mp3";
+          esp_event_post_to(bk_mqtt_handler, "audio", 1, handle_arg, strlen(handle_arg) + 1, portMAX_DELAY);
+          delay(1200);
+          digitalWrite(audio_ctrl, LOW);
+        }
+      }
     }
     else
     {
@@ -200,7 +198,6 @@ uint8_t getFingerprintEnroll()
   }
 
   return 0;
-
 }
 int splitStringToInt(const String &input, char delimiter, int numbers[])
 {
@@ -269,6 +266,10 @@ std::string arduinoStringToStdString(const String &arduinoString)
   char buffer[arduinoString.length() + 1];
   arduinoString.toCharArray(buffer, arduinoString.length() + 1);
   return std::string(buffer);
+}
+String stdStringToArduinoString(const std::string &stdString)
+{
+  return String(stdString.c_str());
 }
 
 /* void listFiles(const char *dirname)
@@ -355,5 +356,5 @@ void DEV_I2C_ScanBus(void)
   else
     Serial.println("done\n");
 
-  delay(5000); 
+  delay(5000);
 }

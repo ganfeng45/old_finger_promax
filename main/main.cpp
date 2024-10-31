@@ -48,14 +48,14 @@ extern "C" void app_main(void)
     };
     esp_event_loop_create(&loop_args, &bk_mqtt_handler);
 
-    xTaskCreatePinnedToCore(&task_access_entry,                  // task
-                            ACCESS_TASk_NAME,                    // task name
-                            4096,                                // stack size
-                            NULL,                                // parameters
-                            15,                                   // priority
-                            &blackboard.system.accessTaskHandle, // returned task handle
-                            1                                    // pinned core
-    );
+    // xTaskCreatePinnedToCore(&task_access_entry,                  // task
+    //                         ACCESS_TASk_NAME,                    // task name
+    //                         4096,                                // stack size
+    //                         NULL,                                // parameters
+    //                         15,                                   // priority
+    //                         &blackboard.system.accessTaskHandle, // returned task handle
+    //                         1                                    // pinned core
+    // );
     xTaskCreatePinnedToCore(&speed_ble_entry, // task
                             "speed_entry",    // task name
                             4096,             // stack size
@@ -72,6 +72,7 @@ extern "C" void app_main(void)
                             NULL,                // returned task handle
                             0                    // pinned core
     );
+    return;
     xTaskCreatePinnedToCore(&task_sb_entry,  // task
                             "task_sb_entry", // task name
                             4096,            // stack size

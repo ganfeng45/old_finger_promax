@@ -16,4 +16,5 @@ void DEV_I2C_ScanBus(void);
 bool rc522_init();
 int rc522_read();
 bool finger_init();
+String stdStringToArduinoString(const std::string &stdString);
 std::string arduinoStringToStdString(const String &arduinoString);
