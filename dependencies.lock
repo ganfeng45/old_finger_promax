@@ -1,0 +1,15 @@
+dependencies:
+  chmorgan__esp-libhelix-mp3:
+    component_hash: null
+    source:
+      path: C:\Users\cheng\Desktop\doc\idfold\old_finger_promax\components\chmorgan__esp-libhelix-mp3
+      type: local
+    version: 1.0.3
+  idf:
+    component_hash: null
+    source:
+      type: idf
+    version: 4.4.7
+manifest_hash: 07f5f664b11498d2ddb1dac6f6536cf09932786672f9d9aa827adf1f43c275a6
+target: esp32c3
+version: 1.0.0
