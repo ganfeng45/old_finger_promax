@@ -1,39 +1,36 @@
-#include "Arduino.h"
+// #include "tasks.h"
 #include "blackboard.h"
-#define TAG "app_test"
-#define TAG "demo_test"
+// #include "blackboard_c.h"
+// #include "DEV_PIN.h"
+#include "util/myutil.h"
+#include <stdio.h>
+#include "SPIFFS.h"
+// #include <Update.h>
+// #include "mbedtls/md5.h" // MD5库
 
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #include <BLE2902.h>
+#include "blackboard.h"
+#include "esp_bt_device.h"
+
+#define TAG "app_test"
+
 BLEServer *pServer = NULL;
 BLECharacteristic *pTxCharacteristic;
 BLECharacteristic *pRxCharacteristic;
 bool deviceConnected = false;
 bool oldDeviceConnected = false;
 uint8_t txValue = 0;
-static CMD_MP3_PLAYER mp3_ble_test;
+// static CMD_MP3_PLAYER mp3_ble_test;
 SemaphoreHandle_t xSema_BLE = NULL;
 String rxValue;
 #define SERVICE_UUID "0000FFE0-0000-1000-8000-00805F9B34FB" // UART service UUID
 #define CHARACTERISTIC_UUID_RX "0000FFE1-0000-1000-8000-00805F9B34FB"
 #define CHARACTERISTIC_UUID_TX "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
 extern void facdID_ctl(bool onoff);
-extern int print_all(String nms);
-size_t countNonZeroElements(const uint8_t *array, size_t size)
-{
-    size_t count = 0;
-    for (size_t i = size; i > 0; i--)
-    {
-        if (array[i] != 0)
-        {
-            return i + 1;
-            break;
-        }
-    }
-    return 1;
-}
+
 
 struct DATA_CMD
 {
@@ -150,11 +147,12 @@ class MyServerCallbacks : public BLEServerCallbacks
     void onConnect(BLEServer *pServer)
     {
         ESP_LOGD(TAG, "onConnect");
+        play_mp3_dec("/spiffs/link.mp3");
 
-        facdID_ctl(false);
-        deviceConnected = true;
-        mp3_ble_test.mp3_path = "/spiffs/connect.mp3";
-        broker.publish("mp3_player", &mp3_ble_test);
+        // facdID_ctl(false);
+        // deviceConnected = true;
+        // mp3_ble_test.mp3_path = "/spiffs/connect.mp3";
+        // broker.publish("mp3_player", &mp3_ble_test);
         // char *handle_arg = "/spiffs/link.mp3";
         // esp_event_post_to(bk_mqtt_handler, "audio", 1, handle_arg, strlen(handle_arg) + 1, portMAX_DELAY);
         delay(1000);
@@ -164,12 +162,13 @@ class MyServerCallbacks : public BLEServerCallbacks
     {
         ESP_LOGD(TAG, "onDisconnect");
 
-        facdID_ctl(true);
-        deviceConnected = false;
-        mp3_ble_test.mp3_path = "/spiffs/disconnect.mp3";
-        broker.publish("mp3_player", &mp3_ble_test);
+        // facdID_ctl(true);
+        // deviceConnected = false;
+        // mp3_ble_test.mp3_path = "/spiffs/disconnect.mp3";
+        // broker.publish("mp3_player", &mp3_ble_test);
     }
 };
+
 
 int ble_reply(DATA_CMD data_cmd, uint8_t *buffer, int buffer_size)
 {
@@ -259,6 +258,8 @@ void empty_all_dec(void *parm)
 extern void extract_data_from_bytes(const uint8_t bytes[9], uint32_t *data1, uint32_t *data2, uint16_t *data3);
 extern void finger_collect_dec(void *param);
 extern void finger_collect(const String &topic, void *param);
+extern int print_all(String nms);
+
 // uint8_t *hexStringToBytes(const char *hexString, size_t *bytesLength)
 // {
 //   size_t length = strlen(hexString);
@@ -457,9 +458,9 @@ void parseDataCmd(String hexValue)
         // ESP_LOGD(TAG, "pres:%d", pres);
         ESP_LOGD(TAG, "获取本地人脸信息 cmd : %02X", data_cmd.CMD_TYPE);
         const char *namespace_name = "face_cfg";
-        nvs_iterator_t it = NULL;
-        esp_err_t res = nvs_entry_find("nvs", namespace_name, NVS_TYPE_ANY, &it);
-        while (res == ESP_OK)
+        //  = NULL;
+        nvs_iterator_t it = nvs_entry_find("nvs", namespace_name, NVS_TYPE_ANY);
+        while (it != NULL)
         {
             nvs_entry_info_t info;
             nvs_entry_info(it, &info); // Can omit error check if parameters are guaranteed to be non-NULL
@@ -476,7 +477,7 @@ void parseDataCmd(String hexValue)
             // {
             //     Serial.println(all_prt.getString(info.key))
             // }
-            res = nvs_entry_next(&it);
+            it = nvs_entry_next(it);
         }
     }
     else if (data_cmd.CMD_TYPE == 0x65)
@@ -501,9 +502,9 @@ void parseDataCmd(String hexValue)
         uint8_t page_size = data_cmd.DATA_ARRAY[0];
         int n_count = 0;
 
-        nvs_iterator_t it = NULL;
-        esp_err_t res = nvs_entry_find("nvs", "work_rec", NVS_TYPE_ANY, &it);
-        while (res == ESP_OK)
+        // nvs_iterator_t it = NULL;
+        nvs_iterator_t it= nvs_entry_find("nvs", "work_rec", NVS_TYPE_ANY);
+        while (it != NULL)
         {
             n_count++;
             uint8_t data[46] = {0}; // Example data
@@ -550,7 +551,7 @@ void parseDataCmd(String hexValue)
                 cmd_reply(cmd, drivr_info_len + 6);
             }
 
-            res = nvs_entry_next(&it);
+            it = nvs_entry_next(it);
             if (n_count >= page_size)
             {
                 break;
@@ -591,7 +592,6 @@ void parseDataCmd(String hexValue)
         ESP.restart();
     }
 }
-
 void task_cmd(void *pvParameters)
 {
     // ESP_LOGD(TAG, "Received Value: %s", hexValue.c_str());
@@ -619,7 +619,7 @@ class MyCallbacks : public BLECharacteristicCallbacks
 {
     void onWrite(BLECharacteristic *pCharacteristic)
     {
-        rxValue = pCharacteristic->getValue();
+        rxValue = stdStringToArduinoString(pCharacteristic->getValue());
         xTaskCreatePinnedToCore(&task_cmd,  // task
                                 "task_cmd", // task name
                                 4096,       // stack size
@@ -630,24 +630,17 @@ class MyCallbacks : public BLECharacteristicCallbacks
         );
     }
 };
-/*
-I (524) BLE_INIT: BT controller compile version [30b57c4]
-I (525) BLE_INIT: Bluetooth MAC:
- */
-void setup_ble()
+
+void ble_task_setup()
 {
-    // Serial.begin(115200);
     xSema_BLE = xSemaphoreCreateBinary();
     xSemaphoreGive(xSema_BLE);
-
-    // Create the BLE Device
-    // BLEDevice::init("test_1");
     String dev_name = "demo";
     if (dev_cfg.getString("DEVICE_NAME", "001") == "001")
     {
         uint64_t chipId = ESP.getEfuseMac();
         dev_name = String((uint16_t)(chipId >> 32), HEX) + String((uint32_t)chipId, HEX);
-        dev_name = dev_name.substring(6);
+        dev_name = dev_name.substring(0, 6);
     }
     else
     {
@@ -657,13 +650,18 @@ void setup_ble()
             // uint64_t chipId = ESP.getEfuseMac();
             // dev_name = String((uint16_t)(chipId >> 32), HEX) + String((uint32_t)chipId, HEX);
             dev_name = dev_name.substring(10);
+            ESP_LOGE(TAG, "MACstr:%s", dev_name.c_str());
         }
     }
     ESP_LOGE(TAG, "ble_name:%s", dev_name.c_str());
 
-    BLEDevice::init(("ZWS_" + dev_name).c_str());
-
-    // Create the BLE Server
+    BLEDevice::init(("LY_LOCK_" + dev_name).c_str());
+    // BLEDevice::init("LY_LOCK_001");
+    // const uint8_t *bleAddr = esp_bt_dev_get_address(); // 查询蓝牙的mac地址，务必要在蓝牙初始化后方可调用！
+    // // sprintf(MACstr, "%02x:%02x:%02x:%02x:%02x:%02x\n", bleAddr[0], bleAddr[1], bleAddr[2], bleAddr[3], bleAddr[4], bleAddr[5]);
+    // dev_cfg.putString("MACstr", MACstr);
+    // ESP_LOGE(TAG, "MACstr:%s", MACstr);
+    // 状态服务
     pServer = BLEDevice::createServer();
     pServer->setCallbacks(new MyServerCallbacks());
 
@@ -682,20 +680,16 @@ void setup_ble()
     // Start the service
     pService->start();
 
-    // Configure the advertising data
-    BLEAdvertising *pAdvertising = pServer->getAdvertising();
+    // Start advertising
+    BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
     BLEAdvertisementData advertisingData;
     String shortuid = "FFE0";
     advertisingData.setFlags(ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT);
-    advertisingData.setPartialServices(BLEUUID(shortuid));
+    advertisingData.setPartialServices(BLEUUID(arduinoStringToStdString(shortuid)));
     // BLEAddress addr = BLEDevice::getAddress();
-    String bleAddress = BLEDevice::getAddress().toString();
+    String bleAddress = stdStringToArduinoString(BLEDevice::getAddress().toString());
     ESP_LOGD(TAG, "bleAddress:%s", bleAddress.c_str());
-
     esp_bd_addr_t *addr = BLEDevice::getAddress().getNative();
-    // 定义自定义数据
-    // String customData = "123456";
-    /* f0:f5:bd:b5:65:76 */
     char cdata[2];
     cdata[0] = 9;
     cdata[1] = 0xFF; // 0x02
@@ -703,66 +697,28 @@ void setup_ble()
     char mac_data[8];
     mac_data[0] = 0x58;
     mac_data[1] = 0x44;
-    /* if (0)
-    {
-        mac_data[2] = *addr[0];
-        mac_data[3] = *addr[1];
-        mac_data[4] = *addr[2];
-        mac_data[5] = *addr[3];
-        mac_data[6] = *addr[4];
-        mac_data[7] = *addr[5];
-    }
-    else if (0)
-    {
-        uint64_t chipId = ESP.getEfuseMac();
-        for (int i = 0; i < 8; i++)
-        {
-            uint8_t ttt = ((chipId >> (8 * i)) & 0xFF);
-            ESP_LOGD(TAG, "mac_data: [%d]:%02X", i, ttt);
-        }
-        for (int i = 0; i < 6; i++)
-        {
-            mac_data[2 + i] = ((chipId >> (8 * i)) & 0xFF);
-        }
-        // mac_data[2] = chipId << 40;
-        // mac_data[3] = bleAddress[1];
-        // mac_data[4] = bleAddress[2];
-        // mac_data[5] = bleAddress[3];
-        // mac_data[6] = bleAddress[4];
-        // mac_data[7] = bleAddress[5];
-    }
-    else */
-    {
-        bleAddress.replace(":", "");
 
-        for (int i = 0; i < 6; i++)
-        {
-            String byteString = bleAddress.substring(i * 2, i * 2 + 2);
-            mac_data[2 + i] = strtol(byteString.c_str(), NULL, 16);
-        }
+    bleAddress.replace(":", "");
+
+    for (int i = 0; i < 6; i++)
+    {
+        String byteString = bleAddress.substring(i * 2, i * 2 + 2);
+        mac_data[2 + i] = strtol(byteString.c_str(), NULL, 16);
     }
-    // ESP_LOGD(TAG, "mac_data:%s", String(mac_data, 8).c_str());
-    // for (int i = 2; i < 8; i++)
-    // {
-    //     ESP_LOGD(TAG, "mac_data:%02X", mac_data[i]);
-    // }
 
     String(mac_data, 8);
-    advertisingData.addData(String(cdata, 2) + String(mac_data, 8));
-    String adv_data = advertisingData.getPayload();
+    advertisingData.addData(arduinoStringToStdString(String(cdata, 2) + String(mac_data, 8)));
+    String adv_data = stdStringToArduinoString(advertisingData.getPayload());
     ESP_LOGE(TAG, "adv_data:%s", adv_data.c_str());
-    // Serial.println(adv_data);
 
-    // Apply the advertising data and start advertising
     pAdvertising->setAdvertisementData(advertisingData);
     pAdvertising->start();
 
     Serial.println("Waiting for a client connection to notify...");
 }
-
-void loop_ble()
+void ble_task_loop()
 {
-    // disconnecting
+
     if (!deviceConnected && oldDeviceConnected)
     {
         delay(500);                  // give the bluetooth stack the chance to get things ready
@@ -777,26 +733,18 @@ void loop_ble()
         oldDeviceConnected = deviceConnected;
     }
 }
-// 关闭蓝牙广播
-void close_ble()
-{
-    // BLEDevice::deinit(false);
-}
-void app_test(void *parm)
-{
-    // Wire.begin(4,5);
 
-    // setup_fm24();
-    // setup_8563();
-    // 设置log等级
-    esp_log_level_set(TAG, ESP_LOG_DEBUG);
+void task_ble(void *params)
+{
+    delay(1000 * 2);
 
-    setup_ble();
-    while (true)
+    ESP_LOGE(TAG, "speed_ble_entry");
+
+    ble_task_setup();
+    while (1)
     {
-        loop_ble();
-        delay(10);
+        // rfid_cfg_local.getString("21199412300221", "doc2str_iic");
+        ble_task_loop();
+        delay(400);
     }
-
-    vTaskDelete(NULL);
 }

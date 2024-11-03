@@ -1,130 +1,118 @@
-#include <stdio.h>
 #include "Arduino.h"
-#include "myutil.h"
-#include "tasks.h"
-#include "blackboard_c.h"
-#include"WiFi.h"
-#define TAG __func__
-// char *handle_arg = "/spiffs/enrool.mp3";
 
-// RTC_PCF8563 rtc;
+#include "blackboard.h"
 
-char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
-
-extern "C" void app_main(void)
+#define TAG "main"
+extern "C"
 {
-    esp_log_level_set("*", ESP_LOG_VERBOSE);
-    initArduino();
-    WiFi.begin("11","12345678");
-    Serial.begin(115200);
-    // ESP_LOGE(__func__, "Current system time: "); // (String) returns time with specified format
-    ESP_LOGI(TAG, "233  Compile time: %s %s", __DATE__, __TIME__);
-    // while (true)
-    // {
-    //     delay(1000);
-    // }
-    dev_init();
+    extern void i2s_example_pdm_tx_task(void *args);
+    extern void app_main_test(void);
+}
+extern void task_twai_entry(void *params);
+extern void task_audio(void *parm);
+extern void task_face(void *parm);
+extern void task_ble(void *parm);
+extern void app_test(void *parm);
+extern void task_8563(void *parm);
+extern void task_finger(void *parm);
+extern void task_ota(void *parm);
+extern void task_rfid(void *parm);
 
-    
-    // DEV_I2C_ScanBus();
-    // pinMode(4,OUTPUT);
-    // pinMode(5,OUTPUT);
-    // int count=0;
-    // while (true)
-    // {
-    //     digitalWrite(4,count++%2);
-    //     digitalWrite(5,count%2);
-    //     delay(1000);
-    // }
-    
 
-    ESP_LOGE("MAIN", "创建 Event Loop");
-    esp_event_loop_args_t loop_args = {
-        .queue_size = 5,
-        .task_name = "night_market_task",
-        .task_priority = uxTaskPriorityGet(NULL),
-        .task_stack_size = 1024 * 5,
-        .task_core_id = tskNO_AFFINITY,
-    };
-    esp_event_loop_create(&loop_args, &bk_mqtt_handler);
 
-    // xTaskCreatePinnedToCore(&task_access_entry,                  // task
-    //                         ACCESS_TASk_NAME,                    // task name
-    //                         4096,                                // stack size
-    //                         NULL,                                // parameters
-    //                         15,                                   // priority
-    //                         &blackboard.system.accessTaskHandle, // returned task handle
-    //                         1                                    // pinned core
-    // );
-    xTaskCreatePinnedToCore(&speed_ble_entry, // task
-                            "speed_entry",    // task name
-                            4096,             // stack size
-                            NULL,             // parameters
-                            10,               // priority
-                            NULL,             // returned task handle
-                            0                 // pinned core
-    );
-    xTaskCreatePinnedToCore(&task_audio_entry,   // task
-                            "speed_audio_entry", // task name
-                            4096,                // stack size
-                            NULL,                // parameters
-                            18,                  // priority
-                            NULL,                // returned task handle
-                            0                    // pinned core
-    );
-    return;
-    xTaskCreatePinnedToCore(&task_sb_entry,  // task
-                            "task_sb_entry", // task name
-                            4096,            // stack size
-                            NULL,            // parameters
-                            10,              // priority
-                            NULL,            // returned task handle
-                            0                // pinned core
-    );
-    // xTaskCreatePinnedToCore(&task_led_entry,  // task
-    //                         "task_led_entry", // task name
-    //                         4096,            // stack size
-    //                         NULL,            // parameters
-    //                         10,              // priority
-    //                         NULL,            // returned task handle
-    //                         0                // pinned core
-    // );
-    delay(2000);
-    if (dev_cfg.getInt("LOCK_ACTION", 0) == 2)
+int print_all(String nms)
+{
+    int count = 0;
+    //    = NULL;
+    nvs_iterator_t it = nvs_entry_find("nvs", nms.c_str(), NVS_TYPE_ANY);
+    while (it != NULL)
     {
-        car_onoff(DEV_ON);
-        blackboard.car_sta.deviceStatus = DEV_AUTH;
-        char *handle_arg = "/spiffs/free.mp3";
-        esp_event_post_to(bk_mqtt_handler, "audio", 1, handle_arg, strlen(handle_arg) + 1, portMAX_DELAY);
-        delay(1500);
-            digitalWrite(audio_ctrl,LOW);
-    //     if (blackboard.system.fingerTaskHandle != nullptr)
-    //     {
-    //         vTaskSuspend(blackboard.system.fingerTaskHandle); // 挂起任务
-    //     }
-    //     delay(1000);
-    //     if (blackboard.system.rc522TaskHandle != nullptr)
-    //     {
-    //         vTaskSuspend(blackboard.system.rc522TaskHandle);
-    //     }
-    // xSemaphoreGive(xSemaRFID);
-    // xSemaphoreGive(xSemaFINGER);
-    // Wire.begin(6, 7);
-    // rc522_init();
-    // mfrc522.PICC_HaltA();
-    // mfrc522.PCD_StopCrypto1();
+        nvs_entry_info_t info;
+        nvs_entry_info(it, &info); // Can omit error check if parameters are guaranteed to be non-NULL
+        ESP_LOGI(TAG, "key '%s', type '%d' ", info.key, info.type);
+        it = nvs_entry_next(it);
+        if (nms == "work_rec" && count > 255)
+        {
+            work_rec.remove(info.key);
+        }
+        count++;
+        // it = nvs_release_iterator(it);
     }
-
-    int a = 0;
-
-    while (false)
-    {
-          
-        delay(1 * 1000);
-        ESP.restart();
-        // char *handle_arg = "/spiffs/enrool.mp3";
-
-        // esp_event_post_to(bk_mqtt_handler, "audio", 1, handle_arg, strlen(handle_arg) + 1, portMAX_DELAY);
-    }
+    return count;
 }
 
+void sys_deafuat()
+{
+
+    Wire.begin(4, 5);
+
+    if (1)
+    {
+        ESP_LOGI(TAG, "----开机初始化参数");
+        // Initialize NVS
+        esp_err_t err = nvs_flash_init();
+        if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
+        {
+            // NVS partition was truncated and needs to be erased
+            // Retry nvs_flash_init
+            ESP_ERROR_CHECK(nvs_flash_erase());
+            err = nvs_flash_init();
+        }
+        ESP_ERROR_CHECK(err);
+
+        dev_cfg.begin("dev_cfg", false);
+        work_rec.begin("work_rec", false);
+        fg_cfg_local.begin("finger_cfg", false);
+        fc_cfg_local.begin("face_cfg", false);
+        rfid_cfg_local.begin("rfid_cfg", false);
+        nvs_stats_t nvs_stats;
+        err = nvs_get_stats(NULL, &nvs_stats);
+        if (err)
+        {
+            ESP_LOGE(TAG, "Failed to get nvs statistics");
+        }
+        else
+        {
+            ESP_LOGI(TAG, "nvs_sta used_entry_count:%zu free_entries:%zu", nvs_stats.used_entries, nvs_stats.free_entries);
+        }
+        ESP_LOGI(TAG, "fg_cfg_local.freeEntries():%zu", fc_cfg_local.freeEntries());
+        // work_rec.clear();
+        ESP_LOGI(TAG, "工作记录:%d 人脸记录:%d", print_all("work_rec"), print_all("face_cfg"));
+
+        // print_all("work_rec");
+        // print_all("face_cfg");
+    }
+}
+void setup()
+{
+    sys_deafuat();
+    xTaskCreatePinnedToCore(task_ble, "task_ble", 4096 * 2, NULL, 5, NULL, 0);
+    xTaskCreatePinnedToCore(task_twai_entry, "task_twai_entry", 1024 * 2, NULL, 5, NULL, 0);
+    xTaskCreatePinnedToCore(task_8563, "task_8563", 1024 * 3, NULL, 5, NULL, 0);
+    xTaskCreatePinnedToCore(task_audio, "task_audio", 1024 * 2, NULL, 19, NULL, 0);
+    xTaskCreatePinnedToCore(task_ota, "task_ota", 4096 * 1, NULL, 19, NULL, 0);
+    xTaskCreatePinnedToCore(task_rfid, "task_rfid", 1024 * 3, NULL, 19, NULL, 0);
+#ifdef DEV_FG
+    delay(2 * 1000);
+    xTaskCreatePinnedToCore(task_finger, "task_finger", 1024 * 4, NULL, 5, NULL, 0);
+#else
+    pinMode(GPIO_NUM_2, OUTPUT);
+    digitalWrite(GPIO_NUM_2, HIGH);
+    delay(3 * 1000);
+    xTaskCreatePinnedToCore(task_face, "task_face", 4096 * 1, NULL, 5, NULL, 0);
+#endif
+}
+
+void loop()
+{
+}
+extern "C" int app_main()
+{
+    setup();
+    while (true)
+    {
+        delay(1000);
+    }
+
+    return 0;
+}

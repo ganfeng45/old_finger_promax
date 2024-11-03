@@ -1,4 +1,4 @@
-#include "tasks.h"
+// #include "tasks.h"
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -11,9 +11,9 @@
 #include "audio_player.h"
 #include "esp_spiffs.h"
 #include "esp_event_loop.h"
-#include "blackboard_c.h"
-#include "DEV_PIN.h"
-
+#define AUIDO_EN (9)
+// #include "blackboard_c.h"
+// #include "DEV_PIN.h"
 
 // #include"blackboard.h"
 
@@ -72,6 +72,7 @@ static void audio_player_callback(audio_player_cb_ctx_t *ctx)
     {
     case AUDIO_PLAYER_CALLBACK_EVENT_IDLE: /**< Player is idle, not playing audio */
         ESP_LOGI(TAG, "IDLE");
+        digitalWrite(AUIDO_EN, LOW);
         break;
     case AUDIO_PLAYER_CALLBACK_EVENT_COMPLETED_PLAYING_NEXT:
         ESP_LOGI(TAG, "NEXT");
@@ -329,6 +330,27 @@ int spk_delet()
 
     return 0;
 }
+int play_mp3(const char *filename, bool force)
+{
+    if (audio_player_get_state() != AUDIO_PLAYER_STATE_IDLE)
+    {
+        // AUDIO_PLAYER_STATE_IDLE
+        return;
+        // audio_player_pause();
+    }
+
+    FILE *fp = fopen(filename, "r");
+    if (fp == NULL)
+    {
+        // 文件打开失败，处理错误
+        perror("Error opening file");
+    }
+    else
+    {
+        audio_player_play(fp);
+    }
+    return 1;
+}
 
 void task_audio_entry(void *params)
 {
@@ -349,48 +371,49 @@ void task_audio_entry(void *params)
     i2s_driver_install(I2S_NUM, &i2s_config, 0, NULL);
     i2s_set_pin(I2S_NUM, &pin_config);
     i2s_zero_dma_buffer(I2S_NUM);
-// litter_star();
-    esp_event_handler_register_with(bk_mqtt_handler, "audio", 1, audio_event_handle, handle_arg);
+    // litter_star();
+    // esp_event_handler_register_with(bk_mqtt_handler, "audio", 1, audio_event_handle, handle_arg);
     if (1)
     {
 
         audio_player_config_t config = {.port = I2S_NUM,
                                         .mute_fn = audio_mute_function,
-                                        .priority =1};
+                                        .priority = 1};
         esp_err_t ret = audio_player_new(config);
         vTaskDelay(1000);
         // pinMode(audio_ctrl,OUTPUT);
         // digitalWrite(audio_ctrl,HIGH);
         ret = audio_player_callback_register(audio_player_callback, NULL);
-        FILE *fp = fopen("/spiffs/coin.mp3","r");
-        if (fp == NULL) {
-    // 文件打开失败，处理错误
-    perror("Error opening file");
-}
+        FILE *fp = fopen("/spiffs/coin.mp3", "r");
+        if (fp == NULL)
+        {
+            // 文件打开失败，处理错误
+            perror("Error opening file");
+        }
         audio_player_play(fp);
         vTaskDelay(1000);
-       digitalWrite(audio_ctrl,LOW);
         audio_player_sta = true;
         while (false)
         {
 
             vTaskDelay(5000);
             audio_player_delete();
-            digitalWrite(audio_ctrl,HIGH);
+            // digitalWrite(audio_ctrl, HIGH);
             ret = audio_player_new(config);
             // FILE *fp = fopen("/spiffs/fangIC.mp3", "r");
             ret = audio_player_callback_register(audio_player_callback, NULL);
-            
+
             FILE *fp = fopen("/spiffs/unlock.mp3", "r");
             audio_player_play(fp);
             vTaskDelay(1500);
-           digitalWrite(audio_ctrl,LOW);
+            // digitalWrite(audio_ctrl, LOW);
         }
     }
+    return;
 
-    // vTaskDelete(NULL);
+    vTaskDelete(NULL);
     int count_d = 0;
-    while (true)
+    while (0 && true)
     {
         if (audio_player_sta)
         {
