@@ -6,7 +6,7 @@
 #include "RTClib.h"
 #include "FM24CLXX.h"
 #include <ESP32Time.h>
-#define DEV_FG (1)
+// #define DEV_FG (1)
 extern Broker broker;
 
 /* nvs */

@@ -10,7 +10,7 @@
 String md5str(String str, int len)
 {
   /* 6CD3556DEBDA54BCA6 */
-MD5Builder md5;
+  MD5Builder md5;
 
   md5.begin();
   md5.add(str);
@@ -21,22 +21,17 @@ MD5Builder md5;
 
 size_t countNonZeroElements(const uint8_t *array, size_t size)
 {
-    size_t count = 0;
-    for (size_t i = size; i > 0; i--)
+  size_t count = 0;
+  for (size_t i = size; i > 0; i--)
+  {
+    if (array[i] != 0)
     {
-        if (array[i] != 0)
-        {
-            return i + 1;
-            break;
-        }
+      return i + 1;
+      break;
     }
-    return 1;
+  }
+  return 1;
 }
-
-
-
-
-
 
 // void printHex(int num, int precision)
 // {
@@ -176,15 +171,30 @@ void printAllNVSKeys(const char *namespace_name)
   ESP_LOGI(TAG, "+++++++++++++++NVS NAME:%s END+++++++++++++++++", namespace_name);
 }
 
-std::string arduinoStringToStdString(const String &arduinoString)
-{
-  char buffer[arduinoString.length() + 1];
-  arduinoString.toCharArray(buffer, arduinoString.length() + 1);
-  return std::string(buffer);
+// std::string arduinoStringToStdString(const String &arduinoString)
+// {
+//   char buffer[arduinoString.length() + 1];
+//   arduinoString.toCharArray(buffer, arduinoString.length() + 1);
+//   return std::string(buffer);
+// }
+
+std::string arduinoStringToStdString(const String &arduinoString) {
+  return std::string(arduinoString.c_str());
 }
+
+// String stdStringToArduinoString(const std::string &stdString)
+// {
+//   return String(stdString.c_str());
+//   // return String(stdString);
+// }
 String stdStringToArduinoString(const std::string &stdString)
 {
-  return String(stdString.c_str());
+  String result;
+  for (char c : stdString)
+  {
+    result += c; // 直接将每个字符添加到 result 中，不做额外转换
+  }
+  return result;
 }
 
 /* void listFiles(const char *dirname)

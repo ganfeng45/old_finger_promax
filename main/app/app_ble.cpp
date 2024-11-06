@@ -15,7 +15,7 @@
 #include "blackboard.h"
 #include "esp_bt_device.h"
 
-#define TAG "app_test"
+#define TAG "app_ble"
 
 BLEServer *pServer = NULL;
 BLECharacteristic *pTxCharacteristic;
@@ -30,7 +30,6 @@ String rxValue;
 #define CHARACTERISTIC_UUID_RX "0000FFE1-0000-1000-8000-00805F9B34FB"
 #define CHARACTERISTIC_UUID_TX "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
 extern void facdID_ctl(bool onoff);
-
 
 struct DATA_CMD
 {
@@ -60,7 +59,7 @@ void printBuffer(const uint8_t *buffer, size_t size)
         if (i < size - 1)
             buffer_str += " ";
     }
-    ESP_LOGD(TAG, "ble reply: %s", buffer_str.c_str());
+    ESP_LOGD(TAG, "ble printBuffer: %s", buffer_str.c_str());
 }
 
 void cmd_reply(DATA_CMD &cmd, size_t bufferSize)
@@ -148,6 +147,8 @@ class MyServerCallbacks : public BLEServerCallbacks
     {
         ESP_LOGD(TAG, "onConnect");
         play_mp3_dec("/spiffs/link.mp3");
+      deviceConnected = true;
+
 
         // facdID_ctl(false);
         // deviceConnected = true;
@@ -161,6 +162,9 @@ class MyServerCallbacks : public BLEServerCallbacks
     void onDisconnect(BLEServer *pServer)
     {
         ESP_LOGD(TAG, "onDisconnect");
+        play_mp3_dec("/spiffs/disconnect.mp3");
+      deviceConnected = false;
+
 
         // facdID_ctl(true);
         // deviceConnected = false;
@@ -168,7 +172,6 @@ class MyServerCallbacks : public BLEServerCallbacks
         // broker.publish("mp3_player", &mp3_ble_test);
     }
 };
-
 
 int ble_reply(DATA_CMD data_cmd, uint8_t *buffer, int buffer_size)
 {
@@ -275,7 +278,7 @@ extern int print_all(String nms);
 void parseDataCmd(String hexValue)
 {
     DATA_CMD data_cmd(hexValue[2], hexValue[3], reinterpret_cast<uint8_t *>(&hexValue[4]));
-    ESP_LOGI(TAG, "CMD_TYPE: %02X", data_cmd.CMD_TYPE);
+    ESP_LOGI(TAG, "命令类型: %02X", data_cmd.CMD_TYPE);
     if (data_cmd.CMD_TYPE == 0x84)
     {
         /* 读取rtc时间 */
@@ -314,7 +317,7 @@ void parseDataCmd(String hexValue)
 
         uint8_t data[29] = {0}; // Example data
 #ifdef DEV_FG
-        data[23] = 0x03;
+        data[23] = 0x0D;
         data[24 + 2] = print_all("finger_cfg");
         data[25 + 2] = 50;
 #else
@@ -428,6 +431,11 @@ void parseDataCmd(String hexValue)
             // 复制enrollData到data_cmd.DATA_ARRAY
             // data_cmd.DATA_ARRAY[0] = (enroll_id >> 8) & 0xFF; // Extract the high byte
             // data_cmd.DATA_ARRAY[1] = enroll_id & 0xFF;
+            ESP_LOGI(TAG, "----绑定人脸 请求数据域");
+
+            printBuffer(data_cmd.DATA_ARRAY, data_cmd.DATA_LEN);
+            ESP_LOGI(TAG, "----绑定人脸 请求数据域");
+
             size_t pres = fc_cfg_local.putBytes(String(enroll_id).c_str(), data_cmd.DATA_ARRAY, data_cmd.DATA_LEN);
             ESP_LOGI(TAG, "face_enroll_pes:%d", pres);
             uint8_t data[3];
@@ -503,7 +511,7 @@ void parseDataCmd(String hexValue)
         int n_count = 0;
 
         // nvs_iterator_t it = NULL;
-        nvs_iterator_t it= nvs_entry_find("nvs", "work_rec", NVS_TYPE_ANY);
+        nvs_iterator_t it = nvs_entry_find("nvs", "work_rec", NVS_TYPE_ANY);
         while (it != NULL)
         {
             n_count++;
@@ -594,10 +602,9 @@ void parseDataCmd(String hexValue)
 }
 void task_cmd(void *pvParameters)
 {
-    // ESP_LOGD(TAG, "Received Value: %s", hexValue.c_str());
     if (xSemaphoreTake(xSema_BLE, 0) == pdTRUE)
     {
-        ESP_LOGD(TAG, "task_cmd");
+        // ESP_LOGD(TAG, "task_cmd");
         String hexValue;
         for (size_t i = 0; i < rxValue.length(); i++)
         {
@@ -605,6 +612,7 @@ void task_cmd(void *pvParameters)
             sprintf(buf, " %02X", (unsigned char)rxValue[i]);
             hexValue += String(buf);
         }
+        ESP_LOGD(TAG, "task_cmd Received Value[%d]: %s", rxValue.length(), hexValue.c_str());
 
         parseDataCmd(rxValue);
         xSemaphoreGive(xSema_BLE);
@@ -619,7 +627,13 @@ class MyCallbacks : public BLECharacteristicCallbacks
 {
     void onWrite(BLECharacteristic *pCharacteristic)
     {
-        rxValue = stdStringToArduinoString(pCharacteristic->getValue());
+        // rxValue = stdStringToArduinoString(pCharacteristic->getValue());
+        std::string rxValue2 = (pCharacteristic->getValue());
+        rxValue = stdStringToArduinoString(rxValue2);
+
+        ESP_LOGI(TAG, "std::string rxValue:%d", rxValue2.length());
+        ESP_LOGI(TAG, "rxValue:%d", stdStringToArduinoString(rxValue2).length());
+
         xTaskCreatePinnedToCore(&task_cmd,  // task
                                 "task_cmd", // task name
                                 4096,       // stack size
@@ -714,7 +728,7 @@ void ble_task_setup()
     pAdvertising->setAdvertisementData(advertisingData);
     pAdvertising->start();
 
-    Serial.println("Waiting for a client connection to notify...");
+    // Serial.println("Waiting for a client connection to notify...");
 }
 void ble_task_loop()
 {
@@ -723,7 +737,7 @@ void ble_task_loop()
     {
         delay(500);                  // give the bluetooth stack the chance to get things ready
         pServer->startAdvertising(); // restart advertising
-        Serial.println("start advertising");
+        // Serial.println("start advertising");
         oldDeviceConnected = deviceConnected;
     }
     // connecting
@@ -737,6 +751,7 @@ void ble_task_loop()
 void task_ble(void *params)
 {
     delay(1000 * 2);
+    esp_log_level_set(TAG, ESP_LOG_VERBOSE);
 
     ESP_LOGE(TAG, "speed_ble_entry");
 

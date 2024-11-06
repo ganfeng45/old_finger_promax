@@ -1,5 +1,5 @@
 #include "zc_face.h"
-
+#define TAG "ZCFACE"
 #define GET_CMD_PACKET(...)                             \
     uint8_t data[] = {__VA_ARGS__};                     \
     Face_Packet packet(cmd_id, sizeof(data),            \
@@ -25,7 +25,8 @@ uint8_t Zc_Face::getStructuredPacket(Face_Packet *packet,
     uint16_t idx = 0, timer = 0;
 
 #ifdef FINGERPRINT_DEBUG
-    Serial.print("<- ");
+    // Serial.print("<- ");
+    ESP_LOGD(TAG, "<- ");
 #endif
 
     while (true)
@@ -37,16 +38,20 @@ uint8_t Zc_Face::getStructuredPacket(Face_Packet *packet,
             if (timer >= timeout)
             {
 #ifdef FINGERPRINT_DEBUG
-                Serial.println("Timed out");
+                // Serial.println("Timed out");
+                ESP_LOGE(TAG, "Timed out");
+
 #endif
                 return FACE_TIMEOUT;
             }
         }
         byte = mySerial->read();
 #ifdef FINGERPRINT_DEBUG
-        Serial.print("0x");
-        Serial.print(byte, HEX);
-        Serial.print(", ");
+        // Serial.print("0x");
+        // Serial.print(byte, HEX);
+        // Serial.print(", ");
+        ESP_LOGD(TAG, "%02x", byte);
+
 #endif
         switch (idx)
         {
@@ -74,7 +79,9 @@ uint8_t Zc_Face::getStructuredPacket(Face_Packet *packet,
             if ((idx - 5) == packet->length)
             {
 #ifdef FINGERPRINT_DEBUG
-                Serial.println(" OK ");
+                // Serial.println(" OK ");
+                ESP_LOGD(TAG, "OK");
+
 #endif
                 return FACE_OK;
             }
@@ -102,18 +109,18 @@ void Zc_Face::writeStructuredPacket(const Face_Packet &packet)
     mySerial->write((uint8_t)(wire_length & 0xFF));
 
 #ifdef FINGERPRINT_DEBUG
-    Serial.print("-> 0x");
-    Serial.print((uint8_t)(packet.start_code >> 8), HEX);
-    Serial.print(", 0x");
-    Serial.print((uint8_t)(packet.start_code & 0xFF), HEX);
+    // Serial.print("-> 0x");
+    // Serial.print((uint8_t)(packet.start_code >> 8), HEX);
+    // Serial.print(", 0x");
+    // Serial.print((uint8_t)(packet.start_code & 0xFF), HEX);
 
-    Serial.print(", 0x");
-    Serial.print(packet.cmd_id, HEX);
+    // Serial.print(", 0x");
+    // Serial.print(packet.cmd_id, HEX);
 
-    Serial.print(", 0x");
-    Serial.print((uint8_t)(wire_length >> 8), HEX);
-    Serial.print(", 0x");
-    Serial.print((uint8_t)(wire_length & 0xFF), HEX);
+    // Serial.print(", 0x");
+    // Serial.print((uint8_t)(wire_length >> 8), HEX);
+    // Serial.print(", 0x");
+    // Serial.print((uint8_t)(wire_length & 0xFF), HEX);
 #endif
 
     uint8_t sum = packet.cmd_id ^ (packet.length >> 8) ^ (packet.length & 0xFF);
@@ -122,8 +129,8 @@ void Zc_Face::writeStructuredPacket(const Face_Packet &packet)
         mySerial->write(packet.data[i]);
         sum ^= packet.data[i];
 #ifdef FINGERPRINT_DEBUG
-        Serial.print(", 0x");
-        Serial.print(packet.data[i], HEX);
+        // Serial.print(", 0x");
+        // Serial.print(packet.data[i], HEX);
 #endif
     }
 
@@ -131,8 +138,8 @@ void Zc_Face::writeStructuredPacket(const Face_Packet &packet)
     //   mySerial->write((uint8_t)(sum & 0xFF));
 
 #ifdef FINGERPRINT_DEBUG
-    Serial.print(", 0x");
-    Serial.println((uint8_t)(sum), HEX);
+    // Serial.print(", 0x");
+    // Serial.println((uint8_t)(sum), HEX);
     // Serial.print(", 0x");
     // Serial.println((uint8_t)(sum & 0xFF), HEX);
 #endif
@@ -163,7 +170,7 @@ uint16_t Zc_Face::getID(uint16_t *facesta)
                 /* 人脸状态消息 */
                 faceNotecount++;
                 int16_t face_sta = packet.data[2] << 8 | packet.data[1];
-                ESP_LOGI("TAG", "人脸状态消息 %s", String(face_sta).c_str());
+                // ESP_LOGI("TAG", "人脸状态消息 %s", String(face_sta).c_str());
 
                 if (face_sta == 0x00)
                 {
@@ -217,11 +224,13 @@ uint8_t Zc_Face::clean_enroll()
     {
         if (packet.data[0] == 0x23 && packet.data[1] == 0x00)
         {
-            Serial.println("清除ok");
+            // Serial.println("清除ok");
+            ESP_LOGD(TAG, "清除ok");
         }
         else
         {
-            Serial.println("清除失败");
+            // Serial.println("清除失败");
+            ESP_LOGD(TAG, "清除失败");
         }
     }
     return 1;

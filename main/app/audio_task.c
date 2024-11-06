@@ -355,6 +355,7 @@ int play_mp3(const char *filename, bool force)
 void task_audio_entry(void *params)
 {
     // esp_event_loop_handle_t *bk_mqtt_handler = (esp_event_loop_handle_t *)params;
+    esp_log_level_set(TAG, ESP_LOG_NONE);
 
     spiffs_app();
     char *handle_arg = "我是个大胃王,爱吃辣";

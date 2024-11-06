@@ -91,9 +91,9 @@ void setup()
     xTaskCreatePinnedToCore(task_8563, "task_8563", 1024 * 3, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(task_audio, "task_audio", 1024 * 2, NULL, 19, NULL, 0);
     xTaskCreatePinnedToCore(task_ota, "task_ota", 4096 * 1, NULL, 19, NULL, 0);
-    xTaskCreatePinnedToCore(task_rfid, "task_rfid", 1024 * 3, NULL, 19, NULL, 0);
 #ifdef DEV_FG
     delay(2 * 1000);
+    xTaskCreatePinnedToCore(task_rfid, "task_rfid", 1024 * 3, NULL, 19, NULL, 0);
     xTaskCreatePinnedToCore(task_finger, "task_finger", 1024 * 4, NULL, 5, NULL, 0);
 #else
     pinMode(GPIO_NUM_2, OUTPUT);

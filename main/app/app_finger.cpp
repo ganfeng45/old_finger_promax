@@ -575,7 +575,7 @@ void finger_auth(void *parm)
                 ESP_LOGI(TAG, "finger.getID:%s", String(id).c_str());
                 pinMode(10, OUTPUT);
                 digitalWrite(10, HIGH);
-                mp3_fg.mp3_path = "/spiffs/auth.mp3";
+                modem_TTS("/spiffs/unlock.mp3");
                 // broker.publish("mp3_player", &mp3_face);
                 // mp3_player_dec_d(&mp3_face);
                 delay(3 * 1000);

@@ -1,7 +1,7 @@
 #pragma once
 #include <Arduino.h>
 
-// #define FINGERPRINT_DEBUG
+#define FINGERPRINT_DEBUG
 
 #define FACE_STARTCODE 0xEFAA
 

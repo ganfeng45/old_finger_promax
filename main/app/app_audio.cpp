@@ -1,4 +1,5 @@
 #include "blackboard.h"
+#include"util/myutil.h"
 #include "Arduino.h"
 #define TAG "app_duaio"
 
@@ -15,6 +16,7 @@ int play_mp3_dec(String filename)
 }
 void task_audio(void *parm)
 {
+    pinMode(9,OUTPUT);
     task_audio_entry(NULL);
     vTaskDelete(NULL);
 }

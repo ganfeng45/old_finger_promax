@@ -1,5 +1,7 @@
 #include "blackboard.h"
 #include "zc_face.h"
+#include "util/myutil.h"
+#include"Arduino.h"
 /* nvs */
 #include "esp_system.h"
 #include "nvs_flash.h"
@@ -9,7 +11,7 @@ SemaphoreHandle_t xSema_FACE = NULL;
 TaskHandle_t faceID_handle = NULL;
 bool faceId_control = true;
 #define FC_PW_PIN GPIO_NUM_2
-extern void mp3_player_dec_d(void *parm);
+// extern void mp3_player_dec_d(void *parm);
 
 Zc_Face face = Zc_Face(&Serial);
 static CMD_MP3_PLAYER mp3_face;
@@ -19,8 +21,10 @@ StaticJsonDocument<1024> doc_replay;
 bool enroll_face(uint16_t *res)
 {
     uint16_t templateCount = 0;
-    mp3_face.mp3_path = "/spiffs/look_cam.mp3";
-    broker.publish("mp3_player", &mp3_face);
+    // mp3_face.mp3_path = "/spiffs/look_cam.mp3";
+    // broker.publish("mp3_player", &mp3_face);
+    play_mp3_dec("/spiffs/look_cam.mp3");
+
     bool enroll_res = true;
 
     uint8_t data[35] = {0x00,
@@ -54,31 +58,36 @@ bool enroll_face(uint16_t *res)
                     switch (i)
                     {
                     case 0:
-                        mp3_face.mp3_path = "/spiffs/look_cam.mp3";
-                        broker.publish("mp3_player", &mp3_face);
+                        // mp3_face.mp3_path = "/spiffs/look_cam.mp3";
+                        // broker.publish("mp3_player", &mp3_face);
+                        play_mp3_dec("/spiffs/look_cam.mp3");
                         ESP_LOGI(TAG, "中间");
                         break;
 
                     case 1:
-                        mp3_face.mp3_path = "/spiffs/look_right.mp3";
-                        broker.publish("mp3_player", &mp3_face);
+                        // mp3_face.mp3_path = "/spiffs/look_right.mp3";
+                        // broker.publish("mp3_player", &mp3_face);
+                        play_mp3_dec("/spiffs/look_right.mp3");
                         ESP_LOGI(TAG, "右边");
                         break;
 
                     case 2:
-                        mp3_face.mp3_path = "/spiffs/look_left.mp3";
-                        broker.publish("mp3_player", &mp3_face);
+                        // mp3_face.mp3_path = "/spiffs/look_left.mp3";
+                        // broker.publish("mp3_player", &mp3_face);
+                        play_mp3_dec("/spiffs/look_left.mp3");
                         ESP_LOGI(TAG, "左边");
                         break;
 
                     case 3:
-                        mp3_face.mp3_path = "/spiffs/look_down.mp3";
-                        broker.publish("mp3_player", &mp3_face);
+                        // mp3_face.mp3_path = "/spiffs/look_down.mp3";
+                        // broker.publish("mp3_player", &mp3_face);
+                        play_mp3_dec("/spiffs/look_down.mp3");
                         ESP_LOGI(TAG, "下边");
                         break;
                     case 4:
-                        mp3_face.mp3_path = "/spiffs/look_up.mp3";
-                        broker.publish("mp3_player", &mp3_face);
+                        // mp3_face.mp3_path = "/spiffs/look_up.mp3";
+                        // broker.publish("mp3_player", &mp3_face);
+                        play_mp3_dec("/spiffs/look_up.mp3");
                         ESP_LOGI(TAG, "上边");
                         break;
 
@@ -145,14 +154,18 @@ void face_enroll_dec(void *param)
             doc_replay["command"] = "add_face";
             if (fc_cfg_local.putString(String(face_enroll_id).c_str(), json2Str))
             {
-                mp3_face.mp3_path = "/spiffs/enroll_ok.mp3";
+                // mp3_face.mp3_path = "/spiffs/enroll_ok.mp3";
+                play_mp3_dec("/spiffs/enroll_ok.mp3");
+                // play_mp3_dec("/spiffs/enroll_ok.mp3");
                 ESP_LOGI(TAG, "完全成功-id:%d", face_enroll_id);
                 doc_replay["code"] = 200;
             }
             else
             {
 
-                mp3_face.mp3_path = "/spiffs/fail.mp3";
+                // mp3_face.mp3_path = "/spiffs/fail.mp3";
+                play_mp3_dec("/spiffs/fail.mp3");
+
                 doc_replay["code"] = 404;
             }
             ble_face.reply.clear();
@@ -162,10 +175,11 @@ void face_enroll_dec(void *param)
         }
         else
         {
-            mp3_face.mp3_path = "/spiffs/fail.mp3";
+            // mp3_face.mp3_path = "/spiffs/fail.mp3";
+            play_mp3_dec("/spiffs/fail.mp3");
         }
         // broker.publish("mp3_player", &mp3_face);
-        mp3_player_dec_d(&mp3_face);
+        // mp3_player_dec_d(&mp3_face);
         delay(2000);
         broker.publish("ble_reply", &ble_face);
         xSemaphoreGive(xSema_FACE);
@@ -176,29 +190,37 @@ bool face_enroll_r(uint16_t *face_enroll_id)
 {
     if (xSemaphoreTake(xSema_FACE, 2000) == pdTRUE)
     {
-        mp3_face.mp3_path = "/spiffs/look_cam.mp3";
-        broker.publish("mp3_player", &mp3_face);
+        // mp3_face.mp3_path = "/spiffs/look_cam.mp3";
+        // broker.publish("mp3_player", &mp3_face);
+        play_mp3_dec("/spiffs/look_cam.mp3");
+
         delay(2000);
         // uint16_t face_enroll_id = 0;
         if (enroll_face(face_enroll_id))
         {
             delay(2000);
-            mp3_face.mp3_path = "/spiffs/enroll_ok.mp3";
-            broker.publish("mp3_player", &mp3_face);
+            // mp3_face.mp3_path = "/spiffs/enroll_ok.mp3";
+            // broker.publish("mp3_player", &mp3_face);
+            play_mp3_dec("/spiffs/enroll_ok.mp3");
+
             delay(2000);
             xSemaphoreGive(xSema_FACE);
 
             // return face_enroll_id;
             return true;
         }
-        mp3_face.mp3_path = "/spiffs/fail.mp3";
-        broker.publish("mp3_player", &mp3_face);
+        // mp3_face.mp3_path = "/spiffs/fail.mp3";
+        // broker.publish("mp3_player", &mp3_face);
+        play_mp3_dec("/spiffs/fail.mp3");
+
         delay(2000);
         xSemaphoreGive(xSema_FACE);
         return false;
     }
-    mp3_face.mp3_path = "/spiffs/fail.mp3";
-    broker.publish("mp3_player", &mp3_face);
+    // mp3_face.mp3_path = "/spiffs/fail.mp3";
+    // broker.publish("mp3_player", &mp3_face);
+    play_mp3_dec("/spiffs/fail.mp3");
+
     delay(2000);
     return false;
 }
@@ -232,18 +254,22 @@ void face_empty(const String &topic, void *param)
         doc_replay["comand"] = "empty_face";
         if (face.empty())
         {
-            mp3_face.mp3_path = "/spiffs/fail.mp3";
+            // mp3_face.mp3_path = "/spiffs/fail.mp3";
+            play_mp3_dec("/spiffs/fail.mp3");
+
             doc_replay["code"] = 404;
         }
         else
         {
-            mp3_face.mp3_path = "/spiffs/empty_ok.mp3";
+            // mp3_face.mp3_path = "/spiffs/empty_ok.mp3";
+            play_mp3_dec("/spiffs/empty_ok.mp3");
+
             fc_cfg_local.clear();
             doc_replay["code"] = 200;
         }
         ble_face.reply.clear();
         serializeJson(doc_replay, ble_face.reply);
-        broker.publish("mp3_player", &mp3_face);
+        // broker.publish("mp3_player", &mp3_face);
         broker.publish("ble_reply", &ble_face);
         xSemaphoreGive(xSema_FACE);
     }
@@ -300,7 +326,6 @@ void face_getUsrlist(const String &topic, void *param)
                 break;
             }
             it = nvs_entry_next(it);
-
         }
         nvs_release_iterator(it);
         ble_face.reply.clear();
@@ -310,7 +335,7 @@ void face_getUsrlist(const String &topic, void *param)
     }
 }
 static int face_wait = 0;
-extern void close_ble();
+// extern void close_ble();
 // extern uint32_t on_stamp;
 void face_getID(void *parm)
 {
@@ -321,11 +346,13 @@ void face_getID(void *parm)
             if (face_wait++ > 10)
             {
                 ESP_LOGI(TAG, "face_wait %d", face_wait);
-                mp3_face.mp3_path = "/spiffs/fail.mp3";
-                broker.publish("mp3_player", &mp3_face);
+                // mp3_face.mp3_path = "/spiffs/fail.mp3";
+                // broker.publish("mp3_player", &mp3_face);
+                play_mp3_dec("/spiffs/fail.mp3");
+
                 delay(3000);
                 digitalWrite(FC_PW_PIN, LOW);
-                close_ble();
+                // close_ble();
                 xSemaphoreGive(xSema_FACE);
                 vTaskDelete(NULL);
             }
@@ -357,11 +384,13 @@ void face_getID(void *parm)
                 pinMode(10, OUTPUT);
                 digitalWrite(10, HIGH);
                 digitalWrite(FC_PW_PIN, LOW);
-                mp3_face.mp3_path = "/spiffs/auth.mp3";
+                // mp3_face.mp3_path = "/spiffs/unlock.mp3";
                 // broker.publish("mp3_player", &mp3_face);
-                mp3_player_dec_d(&mp3_face);
+                play_mp3_dec("/spiffs/unlock.mp3");
+
+                // mp3_player_dec_d(&mp3_face);
                 delay(3 * 1000);
-                close_ble();
+                // close_ble();
                 xSemaphoreGive(xSema_FACE);
                 vTaskDelete(NULL);
             }
@@ -369,9 +398,11 @@ void face_getID(void *parm)
             {
                 ESP_LOGI(TAG, "人脸未注册 %s", String(facesta).c_str());
 
-                mp3_face.mp3_path = "/spiffs/fail.mp3";
+                // mp3_face.mp3_path = "/spiffs/fail.mp3";
+                play_mp3_dec("/spiffs/fail.mp3");
+
                 // broker.publish("mp3_player", &mp3_face);
-                mp3_player_dec_d(&mp3_face);
+                // mp3_player_dec_d(&mp3_face);
             }
             xSemaphoreGive(xSema_FACE);
         }
@@ -394,58 +425,31 @@ void task_face(void *parm)
     delay(500);
 
     // 反序
-    Serial.begin(115200, 134217756U, 21, 20, false, 20000UL, (uint8_t)112U);
+    
+    // Serial.begin(115200, 134217756U, 21, 20, false, 20000UL, (uint8_t)112U);
     // 正序
-    // Serial.begin(115200, 134217756U, 20, 21, false, 20000UL, (uint8_t)112U);
-    delay(500);
-
-    while (0)
-    {
-        uint8_t data[2] = {0x00, 0x02};
-        Face_Packet packet(0x12, 0x02, data);
-        // writeStructuredPacket(packet);
-        face.getStructuredPacket(&packet, 1000);
-        if (packet.cmd_id == 0x01)
-        {
-            ESP_LOGE(TAG, "face POWER OK");
-
-            break;
-        }
-        else
-        {
-            ESP_LOGE(TAG, "face POWER fail");
-        }
-    }
-
-    // if (0)
-    if (0)
-    {
-        while (face.getFaceSta())
-        {
-            /* code */
-            ESP_LOGE(TAG, "face init");
-
-            digitalWrite(2, LOW);
-            delay(1000);
-
-            digitalWrite(2, HIGH);
-            delay(1000);
-        }
-    }
+    Serial.begin(115200, 134217756U, 20, 21, false, 20000UL, (uint8_t)112U);
+    delay(500 * 1);
 
     if (face.getFaceSta())
     {
+        delay(1000);
 
         ESP_LOGE(TAG, "face error");
-        delay(3 * 1000);
-        mp3_face.mp3_path = "/spiffs/fail.mp3";
-        broker.publish("mp3_player", &mp3_face);
+        // mp3_face.mp3_path = "/spiffs/fail.mp3";
+        // broker.publish("mp3_player", &mp3_face);
+        play_mp3_dec("/spiffs/fail.mp3");
+        // delay(3 * 1000);
+
         vTaskDelete(NULL);
     }
     else
     {
-        esp_log_level_set(TAG, ESP_LOG_VERBOSE);
+        // esp_log_level_set(TAG, ESP_LOG_VERBOSE);
+        esp_log_level_set(TAG, ESP_LOG_NONE);
         ESP_LOGI(TAG, "face OK");
+        // play_mp3_dec("/spiffs/fail.mp3");
+
         broker.subscribe("face_enroll", face_enroll);
         broker.subscribe("face_empty", face_empty);
         broker.subscribe("get_Facelist", face_getUsrlist);

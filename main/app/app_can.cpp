@@ -25,7 +25,7 @@ void setup_can()
     /* setup CAN @500kbps */
 
     CAN0.setCANPins(SHIELD_CAN_TX, SHIELD_CAN_RX);
-    if (!CAN0.begin(250000))
+    if (!CAN0.begin(125000))
     {
         ESP_LOGD(TAG, " CAN...............FAIL");
         // delay(500);
@@ -39,17 +39,23 @@ void setup_can()
 }
 int left_distance = 99, right_distance = 99;
 bool ifsend = false;
+int can_count = 0;
 void send_userMsg()
 {
     if (ifsend)
+    {
+        delay(2000);
         return;
+    }
+
     // if (blackboard.face_auth_id)
+    // blackboard.face_auth_id = 3;
     if (blackboard.face_auth_id)
     {
         uint8_t data[46] = {0}; // Example data
         fc_cfg_local.getBytes(String(blackboard.face_auth_id).c_str(), data, 34);
         int drivr_info_len = countNonZeroElements(data, sizeof(data));
-        printf("\n");
+        printf("-- %d\n", ++can_count);
 
         for (int i = 0; i < drivr_info_len; i++)
         {
@@ -61,24 +67,47 @@ void send_userMsg()
         txFrame.id = 0x257;
         txFrame.extended = false;
         txFrame.length = 8;
+        txFrame.data.uint8[0] = 0x20;
+        txFrame.data.uint8[1] = drivr_info_len;
+        if (drivr_info_len % 7 == 0)
+        {
+            txFrame.data.uint8[2] = drivr_info_len / 7;
+        }
+        else
+        {
+            txFrame.data.uint8[2] = (drivr_info_len / 7) + 1;
+        }
+        for (int i = 3; i < 8; i++)
+        {
+            txFrame.data.uint8[i] = 0xff;
+        }
+        CAN0.sendFrame(txFrame);
+        CAN0.sendFrame(txFrame);
+
+        txFrame.id = 0x258;
+
+        // 发送数据子报文 (0x258)
         if (drivr_info_len > 0)
         {
-            for (int i = 0; i < drivr_info_len; i++)
-            {
-                ESP_LOGD(TAG, "send_userMsg %d %02X", i,data[i]);
-                txFrame.data.uint8[i % 8] = data[i];
-                txFrame.length = 8;
-                if (i &&(i+1)% 8 == 0)
-                {
-                    printf("no. %d\n", (i+1)/8);
-                    CAN0.sendFrame(txFrame);
-                }
-            }
-            if (drivr_info_len % 8 != 0)
-            {
-                ESP_LOGD(TAG, "last %d", drivr_info_len % 8);
+            txFrame.id = 0x258;
+            int packet_index = 1; // 子报文序号，从1开始
 
-                txFrame.length = drivr_info_len % 8;
+            for (int i = 0; i < drivr_info_len; i += 7)
+            {
+                txFrame.data.uint8[0] = packet_index++; // 子报文序号
+                int j;
+                for (j = 0; j < 7 && (i + j) < drivr_info_len; j++)
+                {
+                    txFrame.data.uint8[j + 1] = data[i + j]; // 插入数据
+                }
+
+                // 填充剩余字节为0xFF
+                for (; j < 7; j++)
+                {
+                    txFrame.data.uint8[j + 1] = 0xFF;
+                }
+
+                txFrame.length = 8; // 每个子报文长度为8字节
                 CAN0.sendFrame(txFrame);
             }
         }
@@ -117,10 +146,11 @@ void task_twai_entry(void *params)
     ESP_LOGD(TAG, "task_twai_entry Driver installed");
 
     setup_can();
+    delay(5000);
     while (true)
     {
+        delay(250);
         loop_can();
-        delay(25);
     }
     vTaskDelete(NULL);
 }

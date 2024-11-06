@@ -89,6 +89,7 @@ void task_8563(void *parm)
     {
         if (blackboard.face_auth_id)
         {
+            blackboard.car_sta.deviceStatus=DEV_AUTH;
 
             // DateTime now = rtc.now();
             // uint32_t now_stamp__rtc = now.unixtime();

@@ -23,4 +23,4 @@ String stdStringToArduinoString(const std::string &stdString);
 std::string arduinoStringToStdString(const String &arduinoString);
 
 /* 特殊 */
-extern int play_mp3_dec(String filename);
+ int play_mp3_dec(String filename);
