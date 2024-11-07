@@ -1,6 +1,7 @@
 #include "Arduino.h"
 
 #include "blackboard.h"
+#include"util/myutil.h"
 #include <WiFi.h>
 
 #define TAG "MAIN"
@@ -85,7 +86,6 @@ void sys_deafuat()
 void setup()
 {
     sys_deafuat();
-
     xTaskCreatePinnedToCore(task_twai_entry, "task_twai_entry", 1024 * 2, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(task_8563, "task_8563", 1024 * 3, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(task_audio, "task_audio", 1024 * 2, NULL, 19, NULL, 0);
@@ -95,6 +95,8 @@ void setup()
     xTaskCreatePinnedToCore(task_rfid, "task_rfid", 1024 * 3, NULL, 19, NULL, 0);
     xTaskCreatePinnedToCore(task_finger, "task_finger", 1024 * 4, NULL, 5, NULL, 0);
 #else
+    Serial.begin(115200, 134217756U, 20, 21, false, 20000UL, (uint8_t)112U);
+
     pinMode(GPIO_NUM_2, OUTPUT);
     digitalWrite(GPIO_NUM_2, HIGH);
     delay(3 * 1000);
@@ -107,6 +109,7 @@ void setup()
     if (WiFi.status() == WL_CONNECTED)
     {
         ESP_LOGE(TAG, "使用WIFI");
+        play_mp3_dec("/spiffs/link.mp3");
 
         xTaskCreatePinnedToCore(task_ota, "task_ota", 4096 * 1, NULL, 19, NULL, 0);
         // app_ota();

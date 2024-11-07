@@ -42,6 +42,7 @@ void extract_data_from_bytes(const uint8_t bytes[9], uint32_t *data1, uint32_t *
 
 void task_8563(void *parm)
 {
+    esp_log_level_set(TAG, ESP_LOG_VERBOSE);
 
     if (!rtc.begin())
     {
@@ -89,7 +90,7 @@ void task_8563(void *parm)
     {
         if (blackboard.face_auth_id)
         {
-            blackboard.car_sta.deviceStatus=DEV_AUTH;
+            blackboard.car_sta.deviceStatus = DEV_AUTH;
 
             // DateTime now = rtc.now();
             // uint32_t now_stamp__rtc = now.unixtime();

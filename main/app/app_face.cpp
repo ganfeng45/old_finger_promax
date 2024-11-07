@@ -1,7 +1,7 @@
 #include "blackboard.h"
 #include "zc_face.h"
 #include "util/myutil.h"
-#include"Arduino.h"
+#include "Arduino.h"
 /* nvs */
 #include "esp_system.h"
 #include "nvs_flash.h"
@@ -23,7 +23,7 @@ bool enroll_face(uint16_t *res)
     uint16_t templateCount = 0;
     // mp3_face.mp3_path = "/spiffs/look_cam.mp3";
     // broker.publish("mp3_player", &mp3_face);
-    play_mp3_dec("/spiffs/look_cam.mp3");
+    // play_mp3_dec("/spiffs/look_cam.mp3");
 
     bool enroll_res = true;
 
@@ -188,7 +188,7 @@ void face_enroll_dec(void *param)
 }
 bool face_enroll_r(uint16_t *face_enroll_id)
 {
-    if (xSemaphoreTake(xSema_FACE, 2000) == pdTRUE)
+    if (xSemaphoreTake(xSema_FACE, 5000) == pdTRUE)
     {
         // mp3_face.mp3_path = "/spiffs/look_cam.mp3";
         // broker.publish("mp3_player", &mp3_face);
@@ -350,8 +350,8 @@ void face_getID(void *parm)
                 // broker.publish("mp3_player", &mp3_face);
                 play_mp3_dec("/spiffs/fail.mp3");
 
-                delay(3000);
-                digitalWrite(FC_PW_PIN, LOW);
+                delay(1000);
+                // digitalWrite(FC_PW_PIN, LOW);
                 // close_ble();
                 xSemaphoreGive(xSema_FACE);
                 vTaskDelete(NULL);
@@ -389,7 +389,7 @@ void face_getID(void *parm)
                 play_mp3_dec("/spiffs/unlock.mp3");
 
                 // mp3_player_dec_d(&mp3_face);
-                delay(3 * 1000);
+                delay(1 * 1000);
                 // close_ble();
                 xSemaphoreGive(xSema_FACE);
                 vTaskDelete(NULL);
@@ -399,7 +399,7 @@ void face_getID(void *parm)
                 ESP_LOGI(TAG, "人脸未注册 %s", String(facesta).c_str());
 
                 // mp3_face.mp3_path = "/spiffs/fail.mp3";
-                play_mp3_dec("/spiffs/fail.mp3");
+                play_mp3_dec("/spiffs/unenroll.mp3");
 
                 // broker.publish("mp3_player", &mp3_face);
                 // mp3_player_dec_d(&mp3_face);
@@ -410,7 +410,7 @@ void face_getID(void *parm)
         {
             ESP_LOGI(TAG, "xSema_FACE fail");
         }
-        delay(2000);
+        delay(1000);
     }
 }
 void facdID_ctl(bool onoff)
@@ -422,31 +422,49 @@ void task_face(void *parm)
 {
     // pinMode(FC_PW_PIN, OUTPUT);
     // digitalWrite(FC_PW_PIN, HIGH);
-    delay(500);
+    // delay(1000);
+    /* 可用 */
+    Serial.begin(115200, 134217756U, 20, 21, false, 20000UL, (uint8_t)112U);
 
     // 反序
-    
     // Serial.begin(115200, 134217756U, 21, 20, false, 20000UL, (uint8_t)112U);
     // 正序
-    Serial.begin(115200, 134217756U, 20, 21, false, 20000UL, (uint8_t)112U);
-    delay(500 * 1);
+    // Serial.begin(115200, 134217756U, 20, 21, false, 20000UL, (uint8_t)112U);
+    // Serial.flush();
+    // delay(5000 * 1);
+    // Serial.flush();
+    int face_init = 0;
+
+    while (face_init++ < 5)
+    {
+        /* code */
+        if (face.getFaceSta())
+        {
+            ESP_LOGE(TAG, "face error");
+        }
+        else
+        {
+            // play_mp3_dec("/spiffs/link.mp3");
+            break;
+        }
+        delay(1 * 1000);
+    }
 
     if (face.getFaceSta())
     {
-        delay(1000);
 
         ESP_LOGE(TAG, "face error");
         // mp3_face.mp3_path = "/spiffs/fail.mp3";
         // broker.publish("mp3_player", &mp3_face);
         play_mp3_dec("/spiffs/fail.mp3");
-        // delay(3 * 1000);
+        delay(2 * 1000);
 
-        vTaskDelete(NULL);
+        // vTaskDelete(NULL);
     }
-    else
+    // else
     {
-        // esp_log_level_set(TAG, ESP_LOG_VERBOSE);
-        esp_log_level_set(TAG, ESP_LOG_NONE);
+        esp_log_level_set(TAG, ESP_LOG_VERBOSE);
+        // esp_log_level_set(TAG, ESP_LOG_NONE);
         ESP_LOGI(TAG, "face OK");
         // play_mp3_dec("/spiffs/fail.mp3");
 

@@ -141,6 +141,8 @@ void serializeDataCmd(DATA_CMD &cmd, uint8_t *buffer, size_t bufferSize)
     offset += sizeof(cmd.CHECK_SUM);
     memcpy(buffer + offset, &cmd.END_TAG, sizeof(cmd.END_TAG));
 }
+extern void facdID_ctl(bool onoff);
+
 class MyServerCallbacks : public BLEServerCallbacks
 {
     void onConnect(BLEServer *pServer)
@@ -148,6 +150,7 @@ class MyServerCallbacks : public BLEServerCallbacks
         ESP_LOGD(TAG, "onConnect");
         play_mp3_dec("/spiffs/link.mp3");
       deviceConnected = true;
+      facdID_ctl(false);
 
 
         // facdID_ctl(false);
@@ -164,6 +167,8 @@ class MyServerCallbacks : public BLEServerCallbacks
         ESP_LOGD(TAG, "onDisconnect");
         play_mp3_dec("/spiffs/disconnect.mp3");
       deviceConnected = false;
+      facdID_ctl(true);
+
 
 
         // facdID_ctl(true);
@@ -498,7 +503,9 @@ void parseDataCmd(String hexValue)
             if (fc_cfg_local.remove(String(delete_id).c_str()))
             {
                 ESP_LOGD(TAG, "SSS face_delete_one ok");
-                uint8_t data[3] = {0}; // Example data
+                uint8_t data[3] = {0,0,50}; // Example data
+                data[1]=print_all("face_cfg");
+                
                 DATA_CMD cmd(0x65, sizeof(data), data);
                 cmd_reply(cmd, sizeof(data) + 6);
             }
@@ -669,7 +676,7 @@ void ble_task_setup()
     }
     ESP_LOGE(TAG, "ble_name:%s", dev_name.c_str());
 
-    BLEDevice::init(("LY_LOCK_" + dev_name).c_str());
+    BLEDevice::init(("JTZD_FRD_" + dev_name).c_str());
     // BLEDevice::init("LY_LOCK_001");
     // const uint8_t *bleAddr = esp_bt_dev_get_address(); // 查询蓝牙的mac地址，务必要在蓝牙初始化后方可调用！
     // // sprintf(MACstr, "%02x:%02x:%02x:%02x:%02x:%02x\n", bleAddr[0], bleAddr[1], bleAddr[2], bleAddr[3], bleAddr[4], bleAddr[5]);
