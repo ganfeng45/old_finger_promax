@@ -256,7 +256,7 @@ uint8_t Adafruit_Fingerprint::ReadIndexTable(void)
       }
     }
   }
-  Serial.println("\n*****ReadIndexTable 0ver********");
+  // Serial.println("\n*****ReadIndexTable 0ver********");
 
   return result;
 }

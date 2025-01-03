@@ -6,7 +6,7 @@
 #include "RTClib.h"
 #include "FM24CLXX.h"
 #include <ESP32Time.h>
-// #define DEV_FG (1)
+#define DEV_FG (1)
 extern Broker broker;
 
 /* nvs */
@@ -38,6 +38,7 @@ typedef struct
   long free_duration_second;
   uint8_t rfid_sta;
   float distance;
+  uint8_t read_rfid;
 } CarStaData;
 typedef struct 
 {
@@ -76,6 +77,7 @@ extern RTC_PCF8563 rtc;
 extern FM24CLXX memory;
 extern RTC_PCF8563 rtc;
 extern ESP32Time esp32Time;
+
 
 
 extern size_t countNonZeroElements(const uint8_t *array, size_t size);

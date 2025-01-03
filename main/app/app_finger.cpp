@@ -1,9 +1,10 @@
 #include "blackboard.h"
-#include"util/myutil.h"
+#include "util/myutil.h"
 #include "Adafruit_Fingerprint.h"
 #define TAG "finger"
 #define PIN_FG_TOUCH (GPIO_NUM_2)
 #define finger_serial Serial
+bool fingerId_control = true;
 
 Adafruit_Fingerprint finger = Adafruit_Fingerprint(&finger_serial);
 SemaphoreHandle_t xSemaFINGER = NULL;
@@ -21,13 +22,19 @@ void modem_TTS(String str)
 {
     play_mp3_dec(str);
 }
+
+void fingerID_ctl(bool onoff)
+{
+    fingerId_control = onoff;
+}
 bool finger_init()
 {
     pinMode(PIN_FG_TOUCH, INPUT);
     // ESP_LOGD(TAG, "finger_init");
 
     // Serial.begin(57600, 134217756U, 20, 21, false, 20000UL, (uint8_t)112U);
-    Serial.begin(57600, 134217756U, 20, 21, false, 20000UL, (uint8_t)112U);
+    // Serial.begin(57600, 134217756U, 20, 21, false, 20000UL, (uint8_t)112U);
+    Serial.flush();
 
     delay(100);
 
@@ -44,9 +51,13 @@ bool finger_init()
 
     ESP_LOGD(TAG, "Reading sensor parameters");
     finger.getParameters();
-    ESP_LOGD(TAG, "Status: %02x Sys ID: %02x Capacity:%d ", finger.status_reg, finger.system_id, finger.capacity);
+    ESP_LOGD(TAG, "Status: %02x Sys ID: %02x Capacity:%d used:%d", finger.status_reg, finger.system_id, finger.capacity, finger.getTemplateCount());
 
     return true;
+}
+int getFingerUsed()
+{
+    return finger.getTemplateCount();
 }
 int getFingerprintID()
 {
@@ -64,7 +75,7 @@ int getFingerprintID()
         default:
             ESP_LOGD(TAG, "getFingerprintID Unknown error");
             // xSemaphoreGive(xSemaFINGER);
-            return 0;
+            return -1;
         }
 
         // OK success!
@@ -558,7 +569,7 @@ void finger_auth(void *parm)
 {
     while (true)
     {
-        if (xSemaphoreTake(xSemaFINGER, 1000 / portTICK_PERIOD_MS) == pdTRUE)
+        if (fingerId_control && xSemaphoreTake(xSemaFINGER, 1000 / portTICK_PERIOD_MS) == pdTRUE)
         {
 
             int id = getFingerprintID();
@@ -576,6 +587,9 @@ void finger_auth(void *parm)
                 pinMode(10, OUTPUT);
                 digitalWrite(10, HIGH);
                 modem_TTS("/spiffs/unlock.mp3");
+                finger.LEDcontrol(FINGERPRINT_LED_GRADUAL_ON, 100, FINGERPRINT_LED_BLUE, 0);
+
+                // finger.LEDcontrol(false);
                 // broker.publish("mp3_player", &mp3_face);
                 // mp3_player_dec_d(&mp3_face);
                 delay(3 * 1000);
@@ -606,6 +620,10 @@ void finger_auth(void *parm)
             xSemaphoreGive(xSemaFINGER);
             delay(100);
         }
+        else
+        {
+            delay(1000);
+        }
         if (blackboard.car_sta.deviceStatus == DEV_AUTH)
         {
             ESP_LOGD(TAG, "fnger 授权自动关闭");
@@ -613,6 +631,7 @@ void finger_auth(void *parm)
             finger.LEDcontrol(FINGERPRINT_LED_BREATHING, 255, FINGERPRINT_LED_BLUE, 1);
             vTaskDelete(NULL);
         }
+        delay(100);
     }
 }
 void up_authnum(const String &topic, void *param)
@@ -623,7 +642,7 @@ void up_authnum(const String &topic, void *param)
 }
 int fg_delete_one(uint16_t id)
 {
-    if(id == 0xffff)
+    if (id == 0xffff)
     {
         return finger.emptyDatabase();
     }
@@ -633,6 +652,15 @@ void task_finger(void *parm)
 {
     esp_log_level_set(TAG, ESP_LOG_VERBOSE);
     ESP_LOGD(TAG, "task_finger");
+    int fg_conut = 0;
+    while (fg_conut < 5)
+    {
+        if (finger_init())
+        {
+            break;
+        }
+        fg_conut++;
+    }
 
     if (finger_init())
     {
@@ -648,13 +676,14 @@ void task_finger(void *parm)
                                 "finger_auth",     // task name
                                 1024 * 5,          // stack size
                                 NULL,              // parameters
-                                5,                 // priority
+                                15,                 // priority
                                 &finger_acce_task, // returned task handle
                                 0                  // pinned core
         );
     }
     else
     {
+        modem_TTS("/spiffs/fail.mp3");
         ESP_LOGE(TAG, "ERR finger");
     }
 

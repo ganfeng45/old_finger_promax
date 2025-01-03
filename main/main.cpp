@@ -1,7 +1,7 @@
 #include "Arduino.h"
 
 #include "blackboard.h"
-#include"util/myutil.h"
+#include "util/myutil.h"
 #include <WiFi.h>
 
 #define TAG "MAIN"
@@ -75,9 +75,16 @@ void sys_deafuat()
         {
             ESP_LOGI(TAG, "nvs_sta used_entry_count:%zu free_entries:%zu", nvs_stats.used_entries, nvs_stats.free_entries);
         }
-        ESP_LOGI(TAG, "fg_cfg_local.freeEntries():%zu", fc_cfg_local.freeEntries());
+#ifdef DEV_FG
+        // ESP_LOGI(TAG, "fg_cfg_local.freeEntries():%zu", fg_cfg_local.freeEntries());
         // work_rec.clear();
-        ESP_LOGI(TAG, "工作记录:%d 人脸记录:%d", print_all("work_rec"), print_all("face_cfg"));
+        ESP_LOGI(TAG, " freeEntries():%zu 工作记录:%d 指纹记录:%d", fg_cfg_local.freeEntries(), print_all("work_rec"), print_all("finger_cfg"));
+#elif
+        // ESP_LOGI(TAG, "fg_cfg_local.freeEntries():%zu", fc_cfg_local.freeEntries());
+        // work_rec.clear();
+        ESP_LOGI(TAG, "freeEntries():%zu 工作记录:%d 人脸记录:%d", fc_cfg_local.freeEntries(), print_all("work_rec"), print_all("face_cfg"));
+
+#endif
 
         // print_all("work_rec");
         // print_all("face_cfg");
@@ -91,6 +98,8 @@ void setup()
     xTaskCreatePinnedToCore(task_audio, "task_audio", 1024 * 2, NULL, 19, NULL, 0);
 
 #ifdef DEV_FG
+    Serial.begin(57600, 134217756U, 20, 21, false, 20000UL, (uint8_t)112U);
+
     delay(2 * 1000);
     xTaskCreatePinnedToCore(task_rfid, "task_rfid", 1024 * 3, NULL, 19, NULL, 0);
     xTaskCreatePinnedToCore(task_finger, "task_finger", 1024 * 4, NULL, 5, NULL, 0);
@@ -109,7 +118,7 @@ void setup()
     if (WiFi.status() == WL_CONNECTED)
     {
         ESP_LOGE(TAG, "使用WIFI");
-        play_mp3_dec("/spiffs/link.mp3");
+        play_mp3_dec("/spiffs/ota.mp3");
 
         xTaskCreatePinnedToCore(task_ota, "task_ota", 4096 * 1, NULL, 19, NULL, 0);
         // app_ota();

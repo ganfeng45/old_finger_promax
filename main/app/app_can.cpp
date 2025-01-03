@@ -143,7 +143,7 @@ void task_twai_entry(void *params)
     ESP_LOGD(TAG, "task_twai_entry Driver installed");
 
     setup_can();
-    delay(5000);
+    // delay(5000);
     while (true)
     {
         delay(250);

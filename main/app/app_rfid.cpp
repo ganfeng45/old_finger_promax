@@ -1,4 +1,4 @@
-#include"util/myutil.h"
+#include "util/myutil.h"
 #include "blackboard.h"
 #include <MFRC522_I2C.h>
 #include <Wire.h>
@@ -24,9 +24,6 @@ MFRC522 mfrc522(RC_ARD, RC_RST_PIN); // Create MFRC522 instance.
 StaticJsonDocument<128> doc_iic;
 
 extern void modem_TTS(String str);
-// {
-//     play_mp3_dec(str);
-// }
 
 void printHex(int num, int precision)
 {
@@ -36,16 +33,17 @@ void printHex(int num, int precision)
     sprintf(format, "%%.%dX", precision);
 
     sprintf(tmp, format, num);
-    Serial.print(tmp);
+    ESP_LOGI(TAG, "%s", tmp);  // Changed to ESP_LOGI
 }
+
 void printDec(byte *buffer, byte bufferSize)
 {
     for (byte i = 0; i < bufferSize; i++)
     {
-        Serial.print(buffer[i] < 0x10 ? " 0" : " ");
-        Serial.print(buffer[i], DEC);
+        ESP_LOGI(TAG, "%s%02d", (buffer[i] < 0x10 ? " 0" : " "), buffer[i]);  // Changed to ESP_LOGI
     }
 }
+
 void rfid_rst()
 {
 
@@ -53,7 +51,6 @@ void rfid_rst()
 
 bool rc522_init()
 {
-
     for (byte i = 0; i < 6; i++)
     {
         key.keyByte[i] = 0xFF;
@@ -63,15 +60,7 @@ bool rc522_init()
 
     return mfrc522.PCD_Init();
 }
-// String md5str(String str, int len)
-// {
-//     /* 6CD3556DEBDA54BCA6 */
-//     md5.begin();
-//     md5.add(str);
-//     md5.calculate();
-//     String fullMD5 = md5.toString();
-//     return fullMD5.substring(fullMD5.length() - len);
-// }
+
 int rc522_read3()
 {
     if (xSemaphoreTake(xSemaRFID, portMAX_DELAY) == pdTRUE)
@@ -87,8 +76,9 @@ int rc522_read3()
             xSemaphoreGive(xSemaRFID);
             return -1;
         }
+
         MFRC522::PICC_Type piccType = (MFRC522::PICC_Type)mfrc522.PICC_GetType(mfrc522.uid.sak);
-        Serial.println(mfrc522.PICC_GetTypeName(piccType));
+        ESP_LOGI(TAG, "%s", mfrc522.PICC_GetTypeName(piccType));
 
         if (piccType != MFRC522::PICC_TYPE_MIFARE_MINI &&
             piccType != MFRC522::PICC_TYPE_MIFARE_1K &&
@@ -122,18 +112,17 @@ int rc522_read3()
                 status = mfrc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, block, &key, &(mfrc522.uid));
                 if (status != MFRC522::STATUS_OK)
                 {
-                    // ESP_LOGE(TAG, "PCD_Authenticate() failed: %s", mfrc522.GetStatusCodeName(status));
-                    Serial.println(mfrc522.GetStatusCodeName(status));
+                    ESP_LOGE(TAG, "PCD_Authenticate() failed: %s", mfrc522.GetStatusCodeName(status));  // Changed to ESP_LOGE
                 }
                 else
                 {
                     ESP_LOGI(TAG, "PCD_Authenticate() AAAA ok");
                 }
+
                 status = mfrc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_B, block, &key, &(mfrc522.uid));
                 if (status != MFRC522::STATUS_OK)
                 {
-                    // ESP_LOGE(TAG, "PCD_Authenticate() failed: %s", mfrc522.GetStatusCodeName(status));
-                    Serial.println(mfrc522.GetStatusCodeName(status));
+                    ESP_LOGE(TAG, "PCD_Authenticate() failed: %s", mfrc522.GetStatusCodeName(status));  // Changed to ESP_LOGE
 
                     rc522_init();
                     xSemaphoreGive(xSemaRFID);
@@ -150,9 +139,7 @@ int rc522_read3()
                 status = mfrc522.MIFARE_Read(block, buffer1, &len233);
                 if (status != MFRC522::STATUS_OK)
                 {
-                    // ESP_LOGE(TAG, "Reading failed: %s", mfrc522.GetStatusCodeName(status));
-                    Serial.println(mfrc522.GetStatusCodeName(status));
-
+                    ESP_LOGE(TAG, "Reading failed: %s", mfrc522.GetStatusCodeName(status));  // Changed to ESP_LOGE
                     rc522_init();
                     xSemaphoreGive(xSemaRFID);
                     return -1;
@@ -179,7 +166,7 @@ int rc522_read3()
                         DeserializationError error = deserializeJson(doc_rfid, str2json);
                         if (error)
                         {
-                            ESP_LOGE(TAG, "deserializeJson() failed: %s", error.c_str());
+                            ESP_LOGE(TAG, "deserializeJson() failed: %s", error.c_str());  // Changed to ESP_LOGE
                         }
                         else
                         {
@@ -196,9 +183,7 @@ int rc522_read3()
                         status = mfrc522.MIFARE_Read(RC_CM_NUM, buffer1, &len233);
                         if (status != MFRC522::STATUS_OK)
                         {
-                            // ESP_LOGE(TAG, "Reading failed: %s", mfrc522.GetStatusCodeName(status);
-                            Serial.println(mfrc522.GetStatusCodeName(status));
-
+                            ESP_LOGE(TAG, "Reading failed: %s", mfrc522.GetStatusCodeName(status));  // Changed to ESP_LOGE
                             rc522_init();
                             xSemaphoreGive(xSemaRFID);
                             return -1;
@@ -241,44 +226,47 @@ int rc522_read()
 
         if (!mfrc522.PICC_IsNewCardPresent())
         {
-            // rc522_init();
             xSemaphoreGive(xSemaRFID);
             return -1;
         }
 
-        // Verify if the NUID has been readed
         if (!mfrc522.PICC_ReadCardSerial())
         {
-            // rc522_init();
-
             xSemaphoreGive(xSemaRFID);
             return -1;
         }
         MFRC522::PICC_Type piccType = (MFRC522::PICC_Type)mfrc522.PICC_GetType(mfrc522.uid.sak);
-        Serial.print(F("PICC type: "));
-        Serial.println(mfrc522.PICC_GetTypeName(piccType));
-        /* dump */
-        // mfrc522.PICC_DumpToSerial(&(mfrc522.uid));
-        // Check is the PICC of Classic MIFARE type
+        ESP_LOGI(TAG, "PICC type: %s", mfrc522.PICC_GetTypeName(piccType));
+
         if (piccType != MFRC522::PICC_TYPE_MIFARE_MINI &&
             piccType != MFRC522::PICC_TYPE_MIFARE_1K &&
             piccType != MFRC522::PICC_TYPE_MIFARE_4K)
         {
-            Serial.println(F("Your tag is not of type MIFARE Classic."));
+            ESP_LOGW(TAG, "Your tag is not of type MIFARE Classic.");
             xSemaphoreGive(xSemaRFID);
             return -1;
         }
 
         if (1)
         {
-            Serial.println(F("A new card has been detected."));
+            ESP_LOGI(TAG, "A new card has been detected.");
 
-            // Store NUID into nuidPICC array
             for (byte i = 0; i < 4; i++)
             {
                 nuidPICC[i] = mfrc522.uid.uidByte[i];
             }
 
+            ESP_LOGI(TAG, "NEW CARD UID : %x %x %x %x", nuidPICC[0], nuidPICC[1], nuidPICC[2], nuidPICC[3]);
+            if(blackboard.car_sta.read_rfid == 1)
+            {
+                
+            }
+            // printDec(mfrc522.uid.uidByte, mfrc522.uid.size);
+            // // hex打印
+
+            // ESP_LOGI(TAG, "");
+
+            if (1)
             {
                 int block = RC_DRIVER_NUM;
                 byte status;
@@ -286,129 +274,78 @@ int rc522_read()
                 status = mfrc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, block, &key, &(mfrc522.uid));
                 if (status != MFRC522::STATUS_OK)
                 {
-                    ESP_LOGW(TAG, "PCD_Auth A failed: ");
-                    Serial.println(mfrc522.GetStatusCodeName(status));
-                    return -1;
+                    ESP_LOGE(TAG, "PCD_Authenticate() failed: %s", mfrc522.GetStatusCodeName(status));  // Changed to ESP_LOGE
                 }
                 else
                 {
-                    ESP_LOGD(TAG, "PCD_Auth A ok: ");
+                    ESP_LOGI(TAG, "PCD_Authenticate() AAAA ok");
                 }
+
                 status = mfrc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_B, block, &key, &(mfrc522.uid));
                 if (status != MFRC522::STATUS_OK)
                 {
-                    ESP_LOGW(TAG, "PCD_Auth B failed: ");
-
-                    Serial.println(mfrc522.GetStatusCodeName(status));
+                    ESP_LOGE(TAG, "PCD_Authenticate() failed: %s", mfrc522.GetStatusCodeName(status));  // Changed to ESP_LOGE
                     rc522_init();
                     xSemaphoreGive(xSemaRFID);
-
                     return -1;
                 }
                 else
                 {
-                    ESP_LOGD(TAG, "PCD_Auth B ok: ");
+                    ESP_LOGI(TAG, "PCD_Authenticate() BBBB ok");
                 }
 
-                /* 开始读取 */
-                byte buffer_driver_num[18];
-                byte buffer_cmp[18];
-                unsigned char len233 = sizeof(buffer_driver_num);
-                status = mfrc522.MIFARE_Read(RC_DRIVER_NUM, buffer_driver_num, &len233);
+                byte buffer1[18];
+                byte buffer2[18];
+                unsigned char len233 = sizeof(buffer1);
+                status = mfrc522.MIFARE_Read(block, buffer1, &len233);
                 if (status != MFRC522::STATUS_OK)
                 {
-                    ESP_LOGW(TAG, "Reading failed: ");
-                    Serial.println(mfrc522.GetStatusCodeName(status));
+                    ESP_LOGE(TAG, "Reading failed: %s", mfrc522.GetStatusCodeName(status));  // Changed to ESP_LOGE
                     rc522_init();
                     xSemaphoreGive(xSemaRFID);
                     return -1;
                 }
                 else
                 {
+                    ESP_LOGI(TAG, "认证成功--%s", buffer1);
+                    buffer1[15] = '\0';
+                    String myString = String((char *)buffer1);
+                    ESP_LOGI(TAG, "认证成功2--%s", myString.c_str());
+                    ESP_LOGI(TAG, "MD5 Hash: ");
+                    for (int i = 0; i < 18; i++)
+                    {
+                        ESP_LOGI(TAG, "%02X", buffer1[i]);
+                    }
+                    ESP_LOGI(TAG, "");
 
-                    // ESP_LOGD(TAG, "认证成功--%s", buffer1);
-                    buffer_driver_num[15] = '\0';
-                    String myString = String((char *)buffer_driver_num);
-                    ESP_LOGI(TAG, "buffer1:%s", myString.c_str());
                     if (rfid_cfg_local.isKey(myString.c_str()))
                     {
+                        StaticJsonDocument<128> doc_rfid;
+                        String str2json = rfid_cfg_local.getString(myString.c_str(), "{");
+                        ESP_LOGI(TAG, "认证成功233--%s", str2json.c_str());
 
+                        DeserializationError error = deserializeJson(doc_rfid, str2json);
+                        if (error)
                         {
-
-                            StaticJsonDocument<128> doc_rfid;
-                            String str2json = rfid_cfg_local.getString(myString.c_str(), "{");
-                            ESP_LOGI(TAG, "认证成功233--%s", str2json.c_str());
-
-                            DeserializationError error = deserializeJson(doc_rfid, str2json);
-                            if (error)
-                            {
-                                Serial.print("deserializeJson() failed: ");
-                                Serial.println(error.c_str());
-                            }
-                            else
-                            {
-
-                                static CMD_AUTH data_auth;
-                                data_auth.auth_sc = AUTH_RFID;
-                                data_auth.id = doc_rfid["driver_num"].as<String>();
-                                data_auth.name = doc_rfid["name"].as<String>();
-                                data_auth.ps = str2json;
-                                broker.publish("auth", &data_auth);
-
-                                xSemaphoreGive(xSemaRFID);
-                                return 1;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        memset(buffer_driver_num, 0, sizeof(buffer_driver_num));
-                        status = mfrc522.MIFARE_Read(RC_CM_NUM, buffer_driver_num, &len233);
-                        if (status != MFRC522::STATUS_OK)
-                        {
-                            Serial.print(F("Reading failed: "));
-                            Serial.println(mfrc522.GetStatusCodeName(status));
-                            rc522_init();
-                            xSemaphoreGive(xSemaRFID);
-                            return -1;
+                            ESP_LOGE(TAG, "deserializeJson() failed: %s", error.c_str());  // Changed to ESP_LOGE
                         }
                         else
                         {
-                            String cmp_id = dev_cfg.getString("company_num", "cjc1024");
-                            String ttr = md5str(cmp_id, 15) + "T";
-                            ESP_LOGE(TAG, "company_num: %s 长度 %d", ttr.c_str(), ttr.length());
-                            buffer_driver_num[16] = '\0';
-                            String myString = String((char *)buffer_driver_num);
-                            ESP_LOGE(TAG, "认证成功cmp23--%s 长度：%d", myString.c_str(), myString.length());
-                            if (myString == ttr)
-                            {
-                                ESP_LOGE(TAG, "管理员刷卡开机");
-                                xSemaphoreGive(xSemaRFID);
-                                return 1;
-                            }
+                            const char *driver_name = doc_rfid["name"];
+                            int authorize_power = doc_rfid["authorize_power"];
+                            const char *driver_num = doc_rfid["driver_num"];
+                            xSemaphoreGive(xSemaRFID);
+                            return 1;
                         }
                     }
                 }
             }
         }
-        else
-        {
-            Serial.println(F("Card read previously."));
-        }
-
-        // Halt PICC
-        mfrc522.PICC_HaltA();
-
-        // Stop encryption on PCD
-        mfrc522.PCD_StopCrypto1();
         xSemaphoreGive(xSemaRFID);
-    }
-    else
-    {
-        ESP_LOGE(TAG, "获取句柄的h");
     }
     return -1;
 }
+
 
 void rc522_dec(void *params)
 {
@@ -467,7 +404,7 @@ void rfid_write_dec(void *param)
         if (status != MFRC522::STATUS_OK)
         {
             ESP_LOGW(TAG, "PCD_Auth A failed: ");
-            Serial.println(mfrc522.GetStatusCodeName(status));
+            // Serial.println(mfrc522.GetStatusCodeName(status));
             witre_flag = false;
         }
 
@@ -475,7 +412,7 @@ void rfid_write_dec(void *param)
         if (status != MFRC522::STATUS_OK)
         {
             ESP_LOGW(TAG, "PCD_Auth B failed: ");
-            Serial.println(mfrc522.GetStatusCodeName(status));
+            // Serial.println(mfrc522.GetStatusCodeName(status));
             witre_flag = false;
         }
 
@@ -499,7 +436,7 @@ void rfid_write_dec(void *param)
             doc_iic["name"] = info->driver_name;
             doc_iic["driver_num"] = info->driver_num;
             String doc2str_iic;
-            serializeJson(doc_iic, doc2str_iic);
+            // serializeJson(doc_iic, doc2str_iic);
             rfid_cfg_local.putString(key_driver_num.c_str(), doc2str_iic);
 
             strncpy((char *)buffer, key_driver_num.c_str(), 15);

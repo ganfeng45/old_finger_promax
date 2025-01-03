@@ -74,11 +74,50 @@ void task_8563(void *parm)
 
         uint8_t bytes233[10];
         uint16_t byte_data;
+        uint16_t driver_id;
 
         uint32_t start_time, end_time;
         memory.readData(0x00, bytes233, 10);
         extract_data_from_bytes(bytes233, &start_time, &end_time, &byte_data);
-        work_rec.putBytes(String(start_time).c_str(), bytes233, 10);
+        /* test */
+        extract_data_from_bytes(bytes233, &start_time, &end_time, &driver_id);
+        uint8_t data_driver[46] = {0}; // Example data
+
+        if (fg_cfg_local.getBytes(String(driver_id).c_str(), data_driver, 34) == 0)
+        {
+            ESP_LOGD(TAG, "指纹%d使用信息删除", driver_id);
+        }
+        else
+        {
+            struct tm *timeinfo;
+            time_t timestamp = start_time; // 示例时间戳（2024年1月1日的时间戳）
+            timeinfo = localtime(&timestamp);
+            ESP_LOGE(TAG, "year '%d' ", timeinfo->tm_year);
+            int drivr_info_len = countNonZeroElements(data_driver, sizeof(data_driver));
+
+            data_driver[drivr_info_len] = timeinfo->tm_sec;
+            data_driver[drivr_info_len + 1] = timeinfo->tm_min;
+            data_driver[drivr_info_len + 2] = timeinfo->tm_hour;
+            data_driver[drivr_info_len + 3] = timeinfo->tm_mday;
+            data_driver[drivr_info_len + 4] = timeinfo->tm_mon + 1;
+            data_driver[drivr_info_len + 5] = timeinfo->tm_year - 100;
+            drivr_info_len = countNonZeroElements(data_driver, sizeof(data_driver));
+            /* 结束时间 */
+            timestamp = end_time;
+            timeinfo = localtime(&timestamp);
+            ESP_LOGE(TAG, "year '%d' ", timeinfo->tm_year - 100);
+            data_driver[drivr_info_len] = timeinfo->tm_sec;
+            data_driver[drivr_info_len + 1] = timeinfo->tm_min;
+            data_driver[drivr_info_len + 2] = timeinfo->tm_hour;
+            data_driver[drivr_info_len + 3] = timeinfo->tm_mday;
+            data_driver[drivr_info_len + 4] = timeinfo->tm_mon + 1;
+            data_driver[drivr_info_len + 5] = timeinfo->tm_year - 100;
+            drivr_info_len = countNonZeroElements(data_driver, sizeof(data_driver));
+            work_rec.putBytes(String(start_time).c_str(), data_driver, drivr_info_len);
+        }
+
+        /*  */
+        // work_rec.putBytes(String(start_time).c_str(), bytes233, 10);
 
         ESP_LOGE(TAG, "start_time:%s end_time:%s ss:%s id:%s", String(start_time).c_str(), String(end_time).c_str(), String(end_time - start_time).c_str(), String(byte_data).c_str());
     }

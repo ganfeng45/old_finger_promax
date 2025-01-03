@@ -30,6 +30,7 @@ String rxValue;
 #define CHARACTERISTIC_UUID_RX "0000FFE1-0000-1000-8000-00805F9B34FB"
 #define CHARACTERISTIC_UUID_TX "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
 extern void facdID_ctl(bool onoff);
+extern void fingerID_ctl(bool onoff);
 
 struct DATA_CMD
 {
@@ -149,9 +150,9 @@ class MyServerCallbacks : public BLEServerCallbacks
     {
         ESP_LOGD(TAG, "onConnect");
         play_mp3_dec("/spiffs/link.mp3");
-      deviceConnected = true;
-      facdID_ctl(false);
-
+        deviceConnected = true;
+        facdID_ctl(false);
+        fingerID_ctl(false);
 
         // facdID_ctl(false);
         // deviceConnected = true;
@@ -166,10 +167,9 @@ class MyServerCallbacks : public BLEServerCallbacks
     {
         ESP_LOGD(TAG, "onDisconnect");
         play_mp3_dec("/spiffs/disconnect.mp3");
-      deviceConnected = false;
-      facdID_ctl(true);
-
-
+        deviceConnected = false;
+        facdID_ctl(true);
+        fingerID_ctl(true);
 
         // facdID_ctl(true);
         // deviceConnected = false;
@@ -280,6 +280,13 @@ extern int print_all(String nms);
 //   return bytes;
 // }
 
+#ifdef DEV_FG
+extern int getFingerUsed();
+
+#else
+
+#endif
+
 void parseDataCmd(String hexValue)
 {
     DATA_CMD data_cmd(hexValue[2], hexValue[3], reinterpret_cast<uint8_t *>(&hexValue[4]));
@@ -317,12 +324,14 @@ void parseDataCmd(String hexValue)
     else if (data_cmd.CMD_TYPE == 0x81)
     {
         /* 获取系统参数 */
-        ESP_LOGD(TAG, "sysinfo cmd : %02X", data_cmd.CMD_TYPE);
+        ESP_LOGD(TAG, "获取系统参数: %02X", data_cmd.CMD_TYPE);
         uint8_t buffer[50] = {0};
 
         uint8_t data[29] = {0}; // Example data
 #ifdef DEV_FG
-        data[23] = 0x0D;
+        data[23] = 0x03;
+        data[19]=50;
+        // data[23] = 0x0D;
         data[24 + 2] = print_all("finger_cfg");
         data[25 + 2] = 50;
 #else
@@ -362,6 +371,76 @@ void parseDataCmd(String hexValue)
         DATA_CMD cmd(0x53, sizeof(data), data);
         cmd_reply(cmd, 11);
     }
+    else if (data_cmd.CMD_TYPE == 0x51)
+    {
+        ESP_LOGD(TAG, "获取指纹使用信息 cmd : %02X", data_cmd.CMD_TYPE);
+        uint8_t page_size = data_cmd.DATA_ARRAY[0];
+        int n_count = 0;
+
+        // nvs_iterator_t it = NULL;
+        nvs_iterator_t it = nvs_entry_find("nvs", "work_rec", NVS_TYPE_ANY);
+        while (it != NULL)
+        {
+            n_count++;
+            uint8_t data[46] = {0}; // Example data
+            nvs_entry_info_t info;
+            nvs_entry_info(it, &info); // Can omit error check if parameters are guaranteed to be non-NULL
+            ESP_LOGE(TAG, "key '%s', type '%d' ", info.key, info.type);
+            if (info.type == 66)
+            {
+                uint8_t data_wk[46] = {0}; // Example data
+                int data_wk_len = work_rec.getBytes(info.key, data_wk, 46);
+                uint16_t driver_id;
+                uint32_t start_time, end_time;
+                // extract_data_from_bytes(data_wk, &start_time, &end_time, &driver_id);
+
+                // 将时间戳转换为tm结构
+
+                /* 添加驾驶员信息 */
+                // if (fc_cfg_local.getBytes(String(driver_id).c_str(), data, 34) == 0)
+                // {
+                //     ESP_LOGD(TAG, "指纹%d使用信息删除", driver_id);
+
+                //     it = nvs_entry_next(it);
+
+                //     continue;
+                // }
+                // /* 开始时间 */
+                // int drivr_info_len = countNonZeroElements(data, sizeof(data));
+                // struct tm *timeinfo;
+                // time_t timestamp = start_time; // 示例时间戳（2024年1月1日的时间戳）
+                // timeinfo = localtime(&timestamp);
+                // ESP_LOGE(TAG, "year '%d' ", timeinfo->tm_year);
+                // data[drivr_info_len] = timeinfo->tm_sec;
+                // data[drivr_info_len + 1] = timeinfo->tm_min;
+                // data[drivr_info_len + 2] = timeinfo->tm_hour;
+                // data[drivr_info_len + 3] = timeinfo->tm_mday;
+                // data[drivr_info_len + 4] = timeinfo->tm_mon + 1;
+                // data[drivr_info_len + 5] = timeinfo->tm_year - 100;
+                // drivr_info_len = countNonZeroElements(data, sizeof(data));
+                // /* 结束时间 */
+                // timestamp = end_time;
+                // timeinfo = localtime(&timestamp);
+                // ESP_LOGE(TAG, "year '%d' ", timeinfo->tm_year - 100);
+                // data[drivr_info_len] = timeinfo->tm_sec;
+                // data[drivr_info_len + 1] = timeinfo->tm_min;
+                // data[drivr_info_len + 2] = timeinfo->tm_hour;
+                // data[drivr_info_len + 3] = timeinfo->tm_mday;
+                // data[drivr_info_len + 4] = timeinfo->tm_mon + 1;
+                // data[drivr_info_len + 5] = timeinfo->tm_year - 100;
+                // drivr_info_len = countNonZeroElements(data, sizeof(data));
+                DATA_CMD cmd(0x51, data_wk_len, data_wk);
+                cmd_reply(cmd, data_wk_len + 6);
+            }
+
+            it = nvs_entry_next(it);
+            if (n_count >= page_size)
+            {
+                break;
+            }
+        }
+        nvs_release_iterator(it);
+    }
     else if (data_cmd.CMD_TYPE == 0x54)
     {
         ESP_LOGD(TAG, "绑定指纹 cmd : %02X", data_cmd.CMD_TYPE);
@@ -381,21 +460,37 @@ void parseDataCmd(String hexValue)
             DATA_CMD cmd(0x54, sizeof(data), data);
             cmd_reply(cmd, 9);
         }
+    }else if(data_cmd.CMD_TYPE==0x01)
+    {
+        uint8_t rfid_uid_switch=data_cmd.DATA_ARRAY[0];
+        ESP_LOGD(TAG, "rfid_uid_switch:%d",rfid_uid_switch);
+        blackboard.car_sta.read_rfid=rfid_uid_switch;
+        uint8_t data[1] = {0}; // Example data
+        DATA_CMD cmd(0x01, sizeof(data), data);
+        cmd_reply(cmd, 7);
     }
     else if (data_cmd.CMD_TYPE == 0x55)
     {
+        uint8_t data[3] = {0}; // Example data
         uint16_t delete_id = data_cmd.DATA_ARRAY[0] << 8 | data_cmd.DATA_ARRAY[1];
         ESP_LOGD(TAG, "删除指纹 cmd : %02X id:%d", data_cmd.CMD_TYPE, delete_id);
         if (!fg_delete_one(delete_id))
         {
             ESP_LOGD(TAG, "HHHH fg_delete_one ok");
+            data[1] = getFingerUsed();
+            data[2] = 100;
             if (fg_cfg_local.remove(String(delete_id).c_str()))
             {
+                data[0] = 0x00;
                 ESP_LOGD(TAG, "SSS fg_delete_one ok");
-                uint8_t data[3] = {0}; // Example data
-                DATA_CMD cmd(0x55, sizeof(data), data);
-                cmd_reply(cmd, sizeof(data) + 6);
             }
+            else
+            {
+
+                data[0] = 0x01;
+            }
+            DATA_CMD cmd(0x55, sizeof(data), data);
+            cmd_reply(cmd, sizeof(data) + 6);
         }
     }
 
@@ -503,9 +598,9 @@ void parseDataCmd(String hexValue)
             if (fc_cfg_local.remove(String(delete_id).c_str()))
             {
                 ESP_LOGD(TAG, "SSS face_delete_one ok");
-                uint8_t data[3] = {0,0,50}; // Example data
-                data[1]=print_all("face_cfg");
-                
+                uint8_t data[3] = {0, 0, 50}; // Example data
+                data[1] = print_all("face_cfg");
+
                 DATA_CMD cmd(0x65, sizeof(data), data);
                 cmd_reply(cmd, sizeof(data) + 6);
             }
@@ -607,6 +702,11 @@ void parseDataCmd(String hexValue)
         ESP.restart();
     }
 }
+
+void reply_rfid_sta()
+{
+    
+}
 void task_cmd(void *pvParameters)
 {
     if (xSemaphoreTake(xSema_BLE, 0) == pdTRUE)
@@ -675,8 +775,11 @@ void ble_task_setup()
         }
     }
     ESP_LOGE(TAG, "ble_name:%s", dev_name.c_str());
-
+#ifdef DEV_FG
+    BLEDevice::init(("JTZD_FGD_" + dev_name).c_str());
+#else
     BLEDevice::init(("JTZD_FRD_" + dev_name).c_str());
+#endif
     // BLEDevice::init("LY_LOCK_001");
     // const uint8_t *bleAddr = esp_bt_dev_get_address(); // 查询蓝牙的mac地址，务必要在蓝牙初始化后方可调用！
     // // sprintf(MACstr, "%02x:%02x:%02x:%02x:%02x:%02x\n", bleAddr[0], bleAddr[1], bleAddr[2], bleAddr[3], bleAddr[4], bleAddr[5]);
